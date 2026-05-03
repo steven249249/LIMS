@@ -36,6 +36,7 @@ class ActivityLog(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=512, blank=True, default='')
     request_data = models.JSONField(null=True, blank=True)
+    request_id = models.CharField(max_length=64, blank=True, default='', db_index=True)
     duration_ms = models.PositiveIntegerField(default=0)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
 

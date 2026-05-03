@@ -95,7 +95,16 @@ class OrderDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.select_related('user', 'experiment', 'department')
+        return (
+            Order.objects
+            .select_related('user', 'experiment', 'department', 'department__fab', 'assignee')
+            .prefetch_related(
+                'stages__department',
+                'stages__equipment_type',
+                'stages__equipment',
+                'stages__assignee',
+            )
+        )
 
 
 class OrderReviewView(generics.UpdateAPIView):
@@ -108,64 +117,63 @@ class OrderReviewView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request, *args, **kwargs):
-        try:
-            stage = self.get_object()
-            action = request.data.get('action')
+        stage = self.get_object()
+        action = request.data.get('action')
 
-            if action == 'approve':
-                from .services import approve_and_schedule_stage
-                approve_and_schedule_stage(
-                    stage,
-                    schedule_start=request.data.get('schedule_start'),
-                    schedule_end=request.data.get('schedule_end'),
-                    assignee=request.data.get('assignee')
-                )
-                return Response({'detail': f'Stage {stage.step_order} approved.'})
-            
-            elif action == 'reject':
-                # For simplicity, rejecting a stage rejects the whole order
-                from .services import reject_order
-                reject_order(stage.order, rejection_reason=request.data.get('rejection_reason'))
-                return Response({'detail': 'Order rejected.'})
+        if action == 'approve':
+            from .services import approve_and_schedule_stage
+            approve_and_schedule_stage(
+                stage,
+                schedule_start=request.data.get('schedule_start'),
+                schedule_end=request.data.get('schedule_end'),
+                assignee=request.data.get('assignee'),
+            )
+            return Response({'detail': f'Stage {stage.step_order} approved.'})
 
-            elif action == 'reassign':
-                # Allows changing assignee and schedule after approval
-                assignee_id = request.data.get('assignee', stage.assignee_id)
-                new_start = request.data.get('schedule_start') or stage.schedule_start
-                new_end = request.data.get('schedule_end') or stage.schedule_end
+        if action == 'reject':
+            from .services import reject_order
+            reject_order(stage.order, rejection_reason=request.data.get('rejection_reason'))
+            return Response({'detail': 'Order rejected.'})
 
-                from django.utils.dateparse import parse_datetime
-                from django.utils import timezone
-                from django.utils.timezone import is_aware, make_aware
-                
-                # Convert to datetime objects for comparison if they are strings
-                d_start = parse_datetime(new_start) if isinstance(new_start, str) else new_start
-                d_end = parse_datetime(new_end) if isinstance(new_end, str) else new_end
+        if action == 'reassign':
+            return self._reassign(stage, request)
 
-                if d_start and d_end:
-                    if not is_aware(d_start): d_start = make_aware(d_start)
-                    if not is_aware(d_end): d_end = make_aware(d_end)
+        return Response({'detail': 'Invalid action.'}, status=400)
 
-                    if d_start >= d_end:
-                        return Response({'detail': 'End time must be after start time.'}, status=400)
-                    if d_start < timezone.now():
-                        return Response({'detail': 'Start time cannot be in the past.'}, status=400)
+    @staticmethod
+    def _reassign(stage, request):
+        from django.utils import timezone
+        from django.utils.dateparse import parse_datetime
+        from django.utils.timezone import is_aware, make_aware
 
-                stage.assignee_id = assignee_id
-                stage.schedule_start = new_start
-                stage.schedule_end = new_end
-                stage.save()
+        from scheduling.models import EquipmentBooking
 
-                # Sync with EquipmentBooking
-                from scheduling.models import EquipmentBooking
-                EquipmentBooking.objects.filter(stage=stage).update(started_at=new_start, ended_at=new_end)
+        assignee_id = request.data.get('assignee', stage.assignee_id)
+        new_start = request.data.get('schedule_start') or stage.schedule_start
+        new_end = request.data.get('schedule_end') or stage.schedule_end
 
-                return Response({'detail': 'Task reassigned/rescheduled.'})
+        d_start = parse_datetime(new_start) if isinstance(new_start, str) else new_start
+        d_end = parse_datetime(new_end) if isinstance(new_end, str) else new_end
 
-            return Response({'detail': 'Invalid action.'}, status=400)
-        except Exception as e:
-            import traceback
-            return Response({'detail': str(e), 'traceback': traceback.format_exc()}, status=500)
+        if d_start and d_end:
+            if not is_aware(d_start):
+                d_start = make_aware(d_start)
+            if not is_aware(d_end):
+                d_end = make_aware(d_end)
+            if d_start >= d_end:
+                return Response({'detail': 'End time must be after start time.'}, status=400)
+            if d_start < timezone.now():
+                return Response({'detail': 'Start time cannot be in the past.'}, status=400)
+
+        stage.assignee_id = assignee_id
+        stage.schedule_start = new_start
+        stage.schedule_end = new_end
+        stage.save()
+
+        EquipmentBooking.objects.filter(stage=stage).update(
+            started_at=new_start, ended_at=new_end,
+        )
+        return Response({'detail': 'Task reassigned/rescheduled.'})
 
 
 class OrderStageListView(generics.ListAPIView):
@@ -175,16 +183,27 @@ class OrderStageListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        qs = OrderStage.objects.select_related('order', 'department', 'equipment_type').all()
-        
+        qs = (
+            OrderStage.objects
+            .select_related(
+                'order',
+                'order__user',
+                'order__experiment',
+                'department',
+                'equipment_type',
+                'equipment',
+                'assignee',
+            )
+            .all()
+        )
+
         status = self.request.query_params.get('status')
         if status:
             qs = qs.filter(status=status)
-        
-        # Managers only see stages for their lab
+
         if user.role == 'lab_manager' and user.department:
             qs = qs.filter(department=user.department)
-        
+
         return qs
 
 

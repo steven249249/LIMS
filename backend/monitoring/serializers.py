@@ -24,5 +24,6 @@ class ActivityLogSerializer(serializers.ModelSerializer):
             'user_agent',
             'request_data',
             'duration_ms',
+            'request_id',
         )
         read_only_fields = fields

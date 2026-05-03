@@ -94,5 +94,6 @@ class ActivityLogMiddleware:
             ip_address=_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:512],
             request_data=_redact(request_body) if request_body else None,
+            request_id=getattr(request, 'request_id', '')[:64],
             duration_ms=int((time.monotonic() - started_at) * 1000),
         )

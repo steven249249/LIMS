@@ -1,22 +1,47 @@
 """
 Django settings for backend project.
 Lab Equipment Booking & Order Management System
+
+Environment-aware: defaults are dev-friendly; production must override
+``DJANGO_SECRET_KEY``, set ``DJANGO_DEBUG=False``, narrow ``ALLOWED_HOSTS`` and
+``CORS_ALLOWED_ORIGINS``, and set ``DJANGO_PRODUCTION=True`` to opt into the
+strict security headers below.
 """
 
-from pathlib import Path
-from datetime import timedelta
+import logging
 import os
+from datetime import timedelta
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-tpoy8ifpj9v@sh1qi3vo#nf!p87-@_rn(5#ff)myn&_pw%1++o'
-)
+# ---------------------------------------------------------------------------
+# Core flags
+# ---------------------------------------------------------------------------
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+PRODUCTION = os.environ.get('DJANGO_PRODUCTION', 'False').lower() in ('true', '1', 'yes')
 
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1')
+DEV_FALLBACK_SECRET = 'django-insecure-tpoy8ifpj9v@sh1qi3vo#nf!p87-@_rn(5#ff)myn&_pw%1++o'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', DEV_FALLBACK_SECRET)
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+if PRODUCTION and SECRET_KEY == DEV_FALLBACK_SECRET:
+    raise RuntimeError(
+        'DJANGO_SECRET_KEY must be set when DJANGO_PRODUCTION=True. '
+        'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(50))"'
+    )
+if not DEBUG and SECRET_KEY == DEV_FALLBACK_SECRET:
+    logging.getLogger(__name__).warning(
+        'Running with DEBUG=False but the development SECRET_KEY is still in use. '
+        'Set DJANGO_SECRET_KEY before deploying.',
+    )
+
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if h.strip()]
+
+if PRODUCTION and ALLOWED_HOSTS == ['*']:
+    raise RuntimeError(
+        'DJANGO_ALLOWED_HOSTS must be set to a comma-separated host list when '
+        'DJANGO_PRODUCTION=True (wildcard "*" is rejected).'
+    )
 
 # ---------------------------------------------------------------------------
 # Application definition
@@ -42,14 +67,15 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'utils.request_id.RequestIDMiddleware',          # Trace correlation – first thing
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',          # CORS – must be before CommonMiddleware
+    'corsheaders.middleware.CorsMiddleware',          # CORS – before CommonMiddleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'monitoring.middleware.ActivityLogMiddleware',     # Audit trail – placed last to capture authenticated user
+    'monitoring.middleware.ActivityLogMiddleware',   # Last – capture authenticated user
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -114,6 +140,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'EXCEPTION_HANDLER': 'utils.exception_handler.custom_exception_handler',
 }
 
 # ---------------------------------------------------------------------------
@@ -128,10 +155,15 @@ SIMPLE_JWT = {
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://127.0.0.1:5173'
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173',
+    ).split(',')
+    if o.strip()
+]
+# CORS_ALLOW_ALL_ORIGINS is intentionally never enabled.
 
 # ---------------------------------------------------------------------------
 # Redis & Celery
@@ -155,7 +187,10 @@ CELERY_TASK_SERIALIZER = 'json'
 # ---------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8 if DEBUG else 12},
+    },
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
@@ -176,6 +211,23 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ---------------------------------------------------------------------------
+# Security headers (active when PRODUCTION=True)
+# ---------------------------------------------------------------------------
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+if PRODUCTION:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30        # 30 days; raise after stable
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# ---------------------------------------------------------------------------
 # Structured logging
 # ---------------------------------------------------------------------------
 LOGGING = {
@@ -183,6 +235,10 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
+            'format': '[{asctime}] {levelname} {name} req={request_id}: {message}',
+            'style': '{',
+        },
+        'simple': {
             'format': '[{asctime}] {levelname} {name}: {message}',
             'style': '{',
         },
@@ -190,12 +246,13 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+            'formatter': 'simple',
         },
     },
     'loggers': {
         'django': {'handlers': ['console'], 'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO')},
         'monitoring': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'utils': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
     },
 }
 
