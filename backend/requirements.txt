@@ -7,3 +7,11 @@ redis>=7.4,<8
 celery>=5.6,<6
 gunicorn>=23,<24
 sentry-sdk>=2.20,<3
+
+# Test stack
+pytest>=9,<10
+pytest-django>=4.10,<5
+pytest-cov>=7,<8
+pytest-mock>=3.15,<4
+factory-boy>=3.3,<4
+freezegun>=1.5,<2
