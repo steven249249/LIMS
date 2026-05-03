@@ -32,8 +32,11 @@ python -m venv venv
 source venv/bin/activate  # Or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py loaddata seed_data.json   # Load default FABs, departments, experiments, equipment, and demo users
 python manage.py runserver
 ```
+
+> **Note**: `seed_data.json` provides the default options shown in the order-creation form (experiments, equipment types, equipment units) along with demo user accounts. Run `loaddata` once on a freshly migrated database. If you have already created data locally, you may want to reset the database first (delete `db.sqlite3` and re-run `migrate`).
 
 ### 2. Frontend Setup
 ```bash
