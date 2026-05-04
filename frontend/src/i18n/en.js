@@ -321,6 +321,15 @@ export default {
       bookings: { title: 'Bookings', subtitle: 'Equipment time-slot reservations', search: 'Search by order # or equipment code', label: 'booking' },
     },
   },
+  timeline: {
+    title: 'Equipment timeline',
+    today: 'Today',
+    prevDay: 'Previous day',
+    nextDay: 'Next day',
+    legendActive: 'Active now',
+    legendScheduled: 'Scheduled',
+    legendCompleted: 'Completed',
+  },
   bulkUsers: {
     bulkCreateBtn: 'Bulk-create users',
     bulkDeleteBtn: 'Delete selected ({n})',

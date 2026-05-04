@@ -331,6 +331,15 @@ export default {
       bookings: { title: '設備預約', subtitle: '個別設備在指定時段的占用紀錄', search: '依訂單編號或設備代碼搜尋', label: '設備預約' },
     },
   },
+  timeline: {
+    title: '設備時間軸',
+    today: '今日',
+    prevDay: '前一天',
+    nextDay: '後一天',
+    legendActive: '進行中',
+    legendScheduled: '已排程',
+    legendCompleted: '已完成',
+  },
   bulkUsers: {
     bulkCreateBtn: '批次新增使用者',
     bulkDeleteBtn: '批次刪除選中 ({n})',

@@ -1,18 +1,29 @@
 <template>
   <div class="timeline-container card">
-    <div class="timeline-header flex justify-between items-center mb-4">
-      <div class="flex items-center gap-4">
-        <h3 style="margin:0;">📅 Equipment Pipeline</h3>
-        <div class="day-nav flex items-center gap-2">
-          <button class="btn btn-outline btn-xs" @click="changeDay(-1)">&lt;</button>
-          <span class="font-bold date-display">{{ formattedDate }}</span>
-          <button class="btn btn-outline btn-xs" @click="changeDay(1)">&gt;</button>
-        </div>
+    <div class="timeline-header">
+      <div class="header-left">
+        <h3 class="timeline-title">📅 Equipment Pipeline</h3>
+        <a-space :size="4" class="day-nav">
+          <a-tooltip :title="t('timeline.prevDay')">
+            <a-button shape="circle" size="small" @click="changeDay(-1)">
+              <template #icon><LeftOutlined /></template>
+            </a-button>
+          </a-tooltip>
+          <a-button size="small" @click="goToday" class="day-today-btn">
+            {{ t('timeline.today') }}
+          </a-button>
+          <span class="date-display">{{ formattedDate }}</span>
+          <a-tooltip :title="t('timeline.nextDay')">
+            <a-button shape="circle" size="small" @click="changeDay(1)">
+              <template #icon><RightOutlined /></template>
+            </a-button>
+          </a-tooltip>
+        </a-space>
       </div>
-      <div class="flex gap-4 text-sm font-medium">
-        <span class="flex items-center gap-1"><i class="legend-box status-active"></i> Active Now</span>
-        <span class="flex items-center gap-1"><i class="legend-box status-future"></i> Scheduled</span>
-        <span class="flex items-center gap-1"><i class="legend-box status-done"></i> Completed</span>
+      <div class="legend-row">
+        <span class="legend-item"><i class="legend-box status-active"></i> {{ t('timeline.legendActive') }}</span>
+        <span class="legend-item"><i class="legend-box status-future"></i> {{ t('timeline.legendScheduled') }}</span>
+        <span class="legend-item"><i class="legend-box status-done"></i> {{ t('timeline.legendCompleted') }}</span>
       </div>
     </div>
 
@@ -56,7 +67,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps({
   groupedEquipments: { type: Array, required: true },
@@ -65,16 +78,26 @@ const props = defineProps({
 
 const emit = defineEmits(['booking-click'])
 
+const { t, locale } = useI18n()
+
 const currentDate = ref(new Date())
 
 const formattedDate = computed(() => {
-  return currentDate.value.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' })
+  // Switch the date locale alongside the app locale so EN users see English.
+  const tag = locale.value === 'en' ? 'en-US' : 'zh-TW'
+  return currentDate.value.toLocaleDateString(tag, {
+    month: 'short', day: 'numeric', weekday: 'short',
+  })
 })
 
 function changeDay(offset) {
   const d = new Date(currentDate.value)
   d.setDate(d.getDate() + offset)
   currentDate.value = d
+}
+
+function goToday() {
+  currentDate.value = new Date()
 }
 
 function getBookingsForDay(eqId) {
@@ -188,13 +211,15 @@ function getBarStyle(b) {
 .bar-time-sub { font-size: 0.6rem; opacity: 0.8; font-weight: 500; font-family: 'Monaco', monospace; margin-top: 1px; }
 .booking-bar:hover { filter: brightness(1.1); transform: translateY(-3px) scale(1.03); z-index: 100; box-shadow: 0 15px 25px -5px rgba(0,0,0,0.3); }
 
-.bar-active { background: linear-gradient(135deg, #4f46e5, #3730a3); } /* Indigo - Executing Now */
-.bar-waiting { background: linear-gradient(135deg, #f59e0b, #d97706); } /* Amber - Future */
-.bar-done { background: linear-gradient(135deg, #059669, #064e3b); opacity: 0.65; cursor: default; } /* Emerald - Completed */
-.bar-past { background: linear-gradient(135deg, #94a3b8, #64748b); opacity: 0.8; } /* Slate - Past uncompleted */
+.bar-active { background: linear-gradient(135deg, #4f46e5, #3730a3); } /* Indigo — executing now */
+.bar-waiting { background: linear-gradient(135deg, #f59e0b, #d97706); } /* Amber — future */
+.bar-done { background: linear-gradient(135deg, #059669, #064e3b); opacity: 0.7; } /* Emerald — completed */
+.bar-past { background: linear-gradient(135deg, #94a3b8, #64748b); opacity: 0.85; } /* Slate — past uncompleted */
 
-.bar-locked { pointer-events: none; filter: contrast(0.8) grayscale(0.2); }
-.bar-locked:hover { transform: none !important; box-shadow: none !important; filter: contrast(0.8) grayscale(0.2) !important; }
+/* Done bars are read-only (no click), but they still receive hover events
+ * so the native tooltip and the lift animation work the same as active bars. */
+.bar-locked { cursor: help; filter: contrast(0.85) grayscale(0.15); }
+.bar-locked:hover { filter: contrast(1) grayscale(0) brightness(1.05); transform: translateY(-2px); opacity: 0.95; }
 
 .now-line {
   position: absolute; top: 0; bottom: 0; width: 2px;
@@ -212,7 +237,59 @@ function getBarStyle(b) {
 .status-done { background: linear-gradient(135deg, #059669, #064e3b); opacity: 0.7; }
 
 
-.day-nav { background: var(--c-bg); padding: 2px 8px; border-radius: 20px; border: 1px solid var(--c-border); }
-.date-display { font-size: 0.85rem; min-width: 90px; text-align: center; }
-.btn-xs { padding: 2px 6px; font-size: 0.7rem; }
+.timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.timeline-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.day-nav {
+  background: var(--c-bg);
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  transition: border-color 0.15s ease;
+}
+.day-nav:hover {
+  border-color: var(--c-primary);
+}
+.date-display {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 110px;
+  text-align: center;
+  color: var(--c-text);
+  letter-spacing: 0.3px;
+}
+.day-today-btn {
+  font-size: 0.75rem;
+  border-radius: 999px;
+}
+
+.legend-row {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--c-text-muted);
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 </style>
