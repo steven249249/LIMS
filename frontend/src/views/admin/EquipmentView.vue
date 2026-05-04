@@ -3,7 +3,7 @@
     :resource="adminEquipment"
     resource-label="設備"
     title="設備"
-    subtitle="個別設備單位的資產管理 (asset code)"
+    subtitle="管理員的主要任務:把每台設備分配給對應的實驗室 (department)"
     search-placeholder="依設備代碼或類型搜尋"
     default-ordering="code"
     :columns="columns"
@@ -49,9 +49,9 @@ const columns = [
 const formFields = [
   { name: 'equipment_type', label: '設備類型', type: 'select', required: true,
     optionsResource: adminEquipmentTypes, optionLabel: 'name', span: 12 },
-  { name: 'department', label: '所屬部門', type: 'select',
-    optionsResource: adminDepartments, optionLabel: 'name',
-    nullableEmpty: true, span: 12 },
+  { name: 'department', label: '分配實驗室', type: 'select', required: true,
+    optionsResource: adminDepartments, optionLabel: 'name', span: 12,
+    help: '每台設備必須屬於一間實驗室 — 這是後台分配機台的主要操作' },
   { name: 'code', label: '設備代碼', type: 'text', required: true,
     placeholder: '例如: SEM-001', span: 12 },
   { name: 'status', label: '狀態', type: 'select', required: true,

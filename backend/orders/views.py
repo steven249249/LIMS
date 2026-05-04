@@ -47,9 +47,16 @@ class OrderListView(generics.ListAPIView):
     serializer_class = OrderListSerializer
 
     def get_queryset(self):
+        """Visibility scoping per role:
+
+        * superuser          — every order
+        * lab_manager        — orders whose department is the manager's lab
+        * lab_member         — orders that have at least one stage assigned to them
+        * regular_employee   — only orders they themselves submitted
+        """
         user = self.request.user
         qs = Order.objects.select_related('user', 'experiment', 'department', 'assignee')
-        
+
         status_filter = self.request.query_params.get('status')
         if status_filter:
             qs = qs.filter(status=status_filter)
@@ -59,11 +66,8 @@ class OrderListView(generics.ListAPIView):
         if user.role == 'lab_manager':
             return qs.filter(department=user.department)
         if user.role == 'lab_member':
-            # See all in-progress in dept OR specifically assigned to them
-            from django.db.models import Q
-            return qs.filter(department=user.department).filter(
-                Q(status=Order.Status.IN_PROGRESS) | Q(assignee=user)
-            )
+            return qs.filter(stages__assignee=user).distinct()
+        # regular_employee
         return qs.filter(user=user)
 
 
@@ -90,12 +94,18 @@ class OrderCreateView(APIView):
 
 
 class OrderDetailView(generics.RetrieveAPIView):
-    """GET /api/orders/<uuid:pk>/"""
+    """GET /api/orders/<uuid:pk>/
+
+    Returns 404 instead of 403 when the requester lacks visibility — mirrors
+    the row-level filtering of the list endpoint and avoids leaking the
+    existence of orders outside the caller's scope.
+    """
     serializer_class = OrderDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return (
+        user = self.request.user
+        qs = (
             Order.objects
             .select_related('user', 'experiment', 'department', 'department__fab', 'assignee')
             .prefetch_related(
@@ -105,6 +115,13 @@ class OrderDetailView(generics.RetrieveAPIView):
                 'stages__assignee',
             )
         )
+        if user.role == 'superuser':
+            return qs
+        if user.role == 'lab_manager':
+            return qs.filter(department=user.department)
+        if user.role == 'lab_member':
+            return qs.filter(stages__assignee=user).distinct()
+        return qs.filter(user=user)
 
 
 class OrderReviewView(generics.UpdateAPIView):
@@ -182,6 +199,14 @@ class OrderStageListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        """Visibility scoping for stages:
+
+        * superuser        — every stage
+        * lab_manager      — stages whose department is the manager's lab
+                             (so they see who is assigned to what in their lab)
+        * lab_member       — only stages assigned to them
+        * regular_employee — only stages on their own orders
+        """
         user = self.request.user
         qs = (
             OrderStage.objects
@@ -201,10 +226,13 @@ class OrderStageListView(generics.ListAPIView):
         if status:
             qs = qs.filter(status=status)
 
+        if user.role == 'superuser':
+            return qs
         if user.role == 'lab_manager' and user.department:
-            qs = qs.filter(department=user.department)
-
-        return qs
+            return qs.filter(department=user.department)
+        if user.role == 'lab_member':
+            return qs.filter(assignee=user)
+        return qs.filter(order__user=user)
 
 
 

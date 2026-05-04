@@ -104,8 +104,24 @@ class EquipmentTypeSerializer(serializers.ModelSerializer):
 
 
 class EquipmentSerializer(serializers.ModelSerializer):
+    """Admin equipment serializer.
+
+    ``department`` is required at the API layer even though the underlying
+    model column is nullable: the superuser console exists primarily to
+    *allocate equipment to a lab*, so an unassigned record would defeat the
+    purpose. Existing legacy rows with ``department=None`` keep working on
+    read; they just need a department before the next save round-trips.
+    """
+
     equipment_type_name = serializers.CharField(source='equipment_type.name', read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True, default=None)
+    department = serializers.PrimaryKeyRelatedField(
+        queryset=Department.objects.all(),
+        required=True,
+        allow_null=False,
+        error_messages={'null': 'Equipment must be assigned to a lab.',
+                        'required': 'Equipment must be assigned to a lab.'},
+    )
 
     class Meta:
         model = Equipment
