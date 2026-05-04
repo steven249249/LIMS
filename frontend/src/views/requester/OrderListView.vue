@@ -290,7 +290,7 @@ function formatDate(value) {
   50% { transform: scale(1.2); }
 }
 .muted {
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--c-text-muted);
   font-style: italic;
   font-size: 12px;
 }

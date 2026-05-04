@@ -1,579 +1,557 @@
 [
-{
-  "model": "users.fab",
-  "pk": "15344a90-1fcd-4c92-988d-93e084cca216",
-  "fields": {
-    "fab_name": "FAB12A"
+  {
+    "model": "users.fab",
+    "pk": "15344a90-1fcd-4c92-988d-93e084cca216",
+    "fields": {
+      "fab_name": "FAB12A"
+    }
+  },
+  {
+    "model": "users.department",
+    "pk": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+    "fields": {
+      "fab": "15344a90-1fcd-4c92-988d-93e084cca216",
+      "name": "Metrology & Inspection Lab"
+    }
+  },
+  {
+    "model": "users.department",
+    "pk": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+    "fields": {
+      "fab": "15344a90-1fcd-4c92-988d-93e084cca216",
+      "name": "Thin Film & Etch Lab"
+    }
+  },
+  {
+    "model": "users.department",
+    "pk": "b85ed211-cd8f-46ab-aede-e2533a06153f",
+    "fields": {
+      "fab": "15344a90-1fcd-4c92-988d-93e084cca216",
+      "name": "Photolithography Lab"
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "14d93f36-5a27-4a7c-a2f1-65097a82d959",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$hx0wmCVhqhjDO8BJx6fges$6JXSp7TzJ3ehGHtAGAhsAEAvF4pBq/ULc47c/4qYYJ0=",
+      "last_login": "2026-04-28T06:36:00Z",
+      "is_superuser": false,
+      "username": "testuser",
+      "first_name": "\u5148\u751f",
+      "last_name": "\u738b",
+      "email": "t7878780@gmail.com",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2026-04-28T06:35:00Z",
+      "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
+      "role": "regular_employee",
+      "status": "active",
+      "joined_at": "2026-04-28T06:38:45.749Z",
+      "groups": [],
+      "user_permissions": [
+        1
+      ]
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "3d786301-020f-4713-907b-66d0b791be3b",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$laMXEiDVfqRvssSGsp3RJU$gqus3o/OcyilJD/8pdoK0uQ+CjvJnrYWRpdH/+dlXqA=",
+      "last_login": "2026-04-28T09:13:00Z",
+      "is_superuser": false,
+      "username": "Lab_Mem_QC_001",
+      "first_name": "\u5148\u751f",
+      "last_name": "\u8521",
+      "email": "t7878780@gmail.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-04-28T09:13:00Z",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "role": "lab_member",
+      "status": "active",
+      "joined_at": "2026-04-28T09:14:36.771Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "6d54574b-2d1e-4fee-9cf1-76e1265599f8",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$L3GFgMTynTDXo7Wkwine4R$EeY7xEOLJaCI/qIFmXUvkwUcvgOlR1hGnu6pwZoVR2k=",
+      "last_login": "2026-04-28T09:12:00Z",
+      "is_superuser": false,
+      "username": "Lab_Mem_Process_001",
+      "first_name": "\u5148\u751f",
+      "last_name": "\u738b",
+      "email": "t7878780@gmail.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-04-28T09:12:00Z",
+      "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+      "role": "lab_member",
+      "status": "active",
+      "joined_at": "2026-04-28T09:13:17.277Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "803b9eb9-836f-4726-8073-721abe8e19d6",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$RKExQzNftWsDHJv1BO8Vmy$k9JUKLrZPQ5bAMtp2mBo4lFiVUl+A66oqMyrvHwUaZw=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "Lab_Mgr_Photo",
+      "first_name": "",
+      "last_name": "",
+      "email": "t7878780@gmail.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-04-28T08:58:00Z",
+      "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
+      "role": "lab_manager",
+      "status": "active",
+      "joined_at": "2026-04-28T08:58:32.532Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "b217e127-5148-4396-8fe7-4fc88c92c3a8",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$YDTPc9oHWjecKiBj41Aoyc$SYPti9zQGPiSBUj9+s8+HSKDxQ9C1El4hScNkHVoRyo=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "Lab_Mgr_QC",
+      "first_name": "",
+      "last_name": "",
+      "email": "t7878780@gmail.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-04-28T08:58:00Z",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "role": "lab_manager",
+      "status": "active",
+      "joined_at": "2026-04-28T08:58:32.941Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "db61e5b2-91f9-4c66-9d19-725dc6c42a1e",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$t5bk811s1XTpTVOIxFMe9j$wfZXWBQd4PYB5aSQMqQIAp5TLw3WpwhmhTcenHvbqZA=",
+      "last_login": "2026-04-28T09:18:00Z",
+      "is_superuser": false,
+      "username": "Lab_Mgr_Process",
+      "first_name": "",
+      "last_name": "",
+      "email": "t7878780@gmail.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-04-28T08:58:00Z",
+      "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+      "role": "lab_manager",
+      "status": "active",
+      "joined_at": "2026-04-28T08:58:32.739Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": "e6082314-406f-4613-a87e-11ce7a090415",
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$orSvNFwQJKvR6gl6fWzD82$gwWXv+U1QOA3q7tUBI3eMKYtQwEk+pAkmbBreh9obwk=",
+      "last_login": "2026-04-28T09:14:00Z",
+      "is_superuser": false,
+      "username": "Lab_Mem_Photo_001",
+      "first_name": "\u5148\u751f",
+      "last_name": "\u9673",
+      "email": "t7878780@gmail.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-04-28T09:14:00Z",
+      "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
+      "role": "lab_member",
+      "status": "active",
+      "joined_at": "2026-04-28T09:15:06.903Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "equipments.experiment",
+    "pk": "0292a7ed-ebae-4073-9489-58a7d86f3ca7",
+    "fields": {
+      "name": "Full Litho & Metrology Process",
+      "remark": "Complete sequence from Resist Track to EUV Exposure and CD-SEM verification."
+    }
+  },
+  {
+    "model": "equipments.experiment",
+    "pk": "1fc28a09-8df8-4fb6-aebc-c23f84542050",
+    "fields": {
+      "name": "Surface Planarization & Inspect",
+      "remark": "CMP Polishing and Optical Inspection for flatness."
+    }
+  },
+  {
+    "model": "equipments.experiment",
+    "pk": "6192dd5f-b1f7-4079-a98e-f0981985df7f",
+    "fields": {
+      "name": "Thin Film & Etch Loop",
+      "remark": "Deposition followed by Plasma Etching and Defect Inspection."
+    }
+  },
+  {
+    "model": "equipments.experiment",
+    "pk": "c28e6b46-5017-4272-b128-fa632260ebd5",
+    "fields": {
+      "name": "Final Device Testing",
+      "remark": "Wafer probing and final defect check."
+    }
+  },
+  {
+    "model": "equipments.equipmenttype",
+    "pk": "06a4d753-03c5-48f1-b61e-defbdc30dd43",
+    "fields": {
+      "name": "ALD"
+    }
+  },
+  {
+    "model": "equipments.equipmenttype",
+    "pk": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
+    "fields": {
+      "name": "Auto Prober"
+    }
+  },
+  {
+    "model": "equipments.equipmenttype",
+    "pk": "2e19f288-c5f4-448f-8f34-0d22c5620e32",
+    "fields": {
+      "name": "EUV Scanner"
+    }
+  },
+  {
+    "model": "equipments.equipmenttype",
+    "pk": "2f7fe7f5-f088-4ff5-ba3b-8604f2da2dc9",
+    "fields": {
+      "name": "CMP Polisher"
+    }
+  },
+  {
+    "model": "equipments.equipmenttype",
+    "pk": "5c7fd124-aa43-4ca7-aeba-6aaad69989cc",
+    "fields": {
+      "name": "Dry Etcher"
+    }
+  },
+  {
+    "model": "equipments.equipmenttype",
+    "pk": "6047cb79-5232-4160-8955-60e18365c699",
+    "fields": {
+      "name": "CD-SEM"
+    }
+  },
+  {
+    "model": "equipments.equipmenttype",
+    "pk": "9dc08d1d-e49e-4adc-8a3f-62b7d30957f7",
+    "fields": {
+      "name": "Track System"
+    }
+  },
+  {
+    "model": "equipments.equipmenttype",
+    "pk": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
+    "fields": {
+      "name": "Inspect Tool"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "0b323f63-0911-4e28-af44-e38e62c773e7",
+    "fields": {
+      "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "code": "INSP-002",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "15b01cd4-3a04-4a96-a294-56915c99672e",
+    "fields": {
+      "equipment_type": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "code": "PROBE-002",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "1a6c52b9-b0b0-432a-8c85-c23e620fa927",
+    "fields": {
+      "equipment_type": "6047cb79-5232-4160-8955-60e18365c699",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "code": "CDSEM-003",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "1f1e73ad-639e-4b1e-86d8-4b5dc3c6b521",
+    "fields": {
+      "equipment_type": "2e19f288-c5f4-448f-8f34-0d22c5620e32",
+      "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
+      "code": "EUV-001",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "2d2fa265-a6f8-49c3-b070-dd14d057e674",
+    "fields": {
+      "equipment_type": "5c7fd124-aa43-4ca7-aeba-6aaad69989cc",
+      "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+      "code": "ETCH-002",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "2fea03f2-ff4a-4f41-a7cb-ea0622993616",
+    "fields": {
+      "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "code": "INSP-001",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "355ae814-d8f5-4751-aede-1d9658b31f5c",
+    "fields": {
+      "equipment_type": "2f7fe7f5-f088-4ff5-ba3b-8604f2da2dc9",
+      "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+      "code": "CMP-001",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "365166a4-7a97-46cf-aa73-d587927fcf88",
+    "fields": {
+      "equipment_type": "06a4d753-03c5-48f1-b61e-defbdc30dd43",
+      "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+      "code": "ALD-002",
+      "status": "occupied"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "40dbb2ac-8846-4e5e-8f7d-74cc3368c5da",
+    "fields": {
+      "equipment_type": "5c7fd124-aa43-4ca7-aeba-6aaad69989cc",
+      "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+      "code": "ETCH-001",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "679dcf5e-fe6b-40de-b430-669b1e155706",
+    "fields": {
+      "equipment_type": "6047cb79-5232-4160-8955-60e18365c699",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "code": "CDSEM-001",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "7a947c1c-943f-47a1-b6a3-5cc4047c9803",
+    "fields": {
+      "equipment_type": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "code": "PROBE-001",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "7f15357e-6b7a-4973-8d11-f2adb1b4745d",
+    "fields": {
+      "equipment_type": "2f7fe7f5-f088-4ff5-ba3b-8604f2da2dc9",
+      "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+      "code": "CMP-002",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "bb1e478e-c635-4b28-9cba-895c6b6de92f",
+    "fields": {
+      "equipment_type": "9dc08d1d-e49e-4adc-8a3f-62b7d30957f7",
+      "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
+      "code": "TRACK-002",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "f2a77ff4-a648-449e-8ed3-fb5a1dd9a36f",
+    "fields": {
+      "equipment_type": "6047cb79-5232-4160-8955-60e18365c699",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "code": "CDSEM-002",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "f87021bc-102d-41cf-993b-c478ffcb3757",
+    "fields": {
+      "equipment_type": "2e19f288-c5f4-448f-8f34-0d22c5620e32",
+      "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
+      "code": "EUV-002",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "f8b7f5d7-246e-4650-a1a3-6d4a9430cb5c",
+    "fields": {
+      "equipment_type": "06a4d753-03c5-48f1-b61e-defbdc30dd43",
+      "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
+      "code": "ALD-001",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "f98923ce-7b34-4a70-ab61-8fa5a9f00c33",
+    "fields": {
+      "equipment_type": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
+      "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
+      "code": "PROBE-003",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.equipment",
+    "pk": "fef9ea18-f11b-4f38-abe4-7243ed666cc6",
+    "fields": {
+      "equipment_type": "9dc08d1d-e49e-4adc-8a3f-62b7d30957f7",
+      "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
+      "code": "TRACK-001",
+      "status": "available"
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "5578e46d-2407-4207-bafe-151f38fde2c4",
+    "fields": {
+      "experiment": "1fc28a09-8df8-4fb6-aebc-c23f84542050",
+      "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
+      "quantity": 1,
+      "step_order": 2
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "5b80ecf5-60a4-4f00-b6d0-621ecb7e7574",
+    "fields": {
+      "experiment": "0292a7ed-ebae-4073-9489-58a7d86f3ca7",
+      "equipment_type": "9dc08d1d-e49e-4adc-8a3f-62b7d30957f7",
+      "quantity": 1,
+      "step_order": 1
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "5f2fef2d-677a-4931-b56e-65a6a7dc6053",
+    "fields": {
+      "experiment": "c28e6b46-5017-4272-b128-fa632260ebd5",
+      "equipment_type": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
+      "quantity": 1,
+      "step_order": 1
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "7ae3bb4c-652a-41fc-a28e-d630b58ac5a2",
+    "fields": {
+      "experiment": "1fc28a09-8df8-4fb6-aebc-c23f84542050",
+      "equipment_type": "2f7fe7f5-f088-4ff5-ba3b-8604f2da2dc9",
+      "quantity": 1,
+      "step_order": 1
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "80fbd316-02a1-4042-a68c-73d6283b6528",
+    "fields": {
+      "experiment": "6192dd5f-b1f7-4079-a98e-f0981985df7f",
+      "equipment_type": "06a4d753-03c5-48f1-b61e-defbdc30dd43",
+      "quantity": 1,
+      "step_order": 1
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "97137377-f53a-4441-be3d-97a2364ad8b7",
+    "fields": {
+      "experiment": "c28e6b46-5017-4272-b128-fa632260ebd5",
+      "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
+      "quantity": 1,
+      "step_order": 2
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "c966386a-e3ec-4bdb-bac5-810a161f0a5d",
+    "fields": {
+      "experiment": "6192dd5f-b1f7-4079-a98e-f0981985df7f",
+      "equipment_type": "5c7fd124-aa43-4ca7-aeba-6aaad69989cc",
+      "quantity": 1,
+      "step_order": 2
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "e9f26276-6d39-46f1-8bca-236907e7acc1",
+    "fields": {
+      "experiment": "0292a7ed-ebae-4073-9489-58a7d86f3ca7",
+      "equipment_type": "2e19f288-c5f4-448f-8f34-0d22c5620e32",
+      "quantity": 1,
+      "step_order": 2
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "f235af3e-c154-4ff8-8028-8417e641aa05",
+    "fields": {
+      "experiment": "0292a7ed-ebae-4073-9489-58a7d86f3ca7",
+      "equipment_type": "6047cb79-5232-4160-8955-60e18365c699",
+      "quantity": 1,
+      "step_order": 3
+    }
+  },
+  {
+    "model": "equipments.experimentrequiredequipment",
+    "pk": "fb8078eb-e934-47f9-9a31-c2fd0076311f",
+    "fields": {
+      "experiment": "6192dd5f-b1f7-4079-a98e-f0981985df7f",
+      "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
+      "quantity": 1,
+      "step_order": 3
+    }
   }
-},
-{
-  "model": "users.department",
-  "pk": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-  "fields": {
-    "fab": "15344a90-1fcd-4c92-988d-93e084cca216",
-    "name": "Metrology & Inspection Lab"
-  }
-},
-{
-  "model": "users.department",
-  "pk": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-  "fields": {
-    "fab": "15344a90-1fcd-4c92-988d-93e084cca216",
-    "name": "Thin Film & Etch Lab"
-  }
-},
-{
-  "model": "users.department",
-  "pk": "b85ed211-cd8f-46ab-aede-e2533a06153f",
-  "fields": {
-    "fab": "15344a90-1fcd-4c92-988d-93e084cca216",
-    "name": "Photolithography Lab"
-  }
-},
-{
-  "model": "users.user",
-  "pk": "14d93f36-5a27-4a7c-a2f1-65097a82d959",
-  "fields": {
-    "password": "pbkdf2_sha256$1000000$hx0wmCVhqhjDO8BJx6fges$6JXSp7TzJ3ehGHtAGAhsAEAvF4pBq/ULc47c/4qYYJ0=",
-    "last_login": "2026-04-28T06:36:00Z",
-    "is_superuser": false,
-    "username": "testuser",
-    "first_name": "先生",
-    "last_name": "王",
-    "email": "t7878780@gmail.com",
-    "is_staff": true,
-    "is_active": true,
-    "date_joined": "2026-04-28T06:35:00Z",
-    "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
-    "role": "regular_employee",
-    "status": "active",
-    "joined_at": "2026-04-28T06:38:45.749Z",
-    "groups": [],
-    "user_permissions": [
-      1
-    ]
-  }
-},
-{
-  "model": "users.user",
-  "pk": "3d786301-020f-4713-907b-66d0b791be3b",
-  "fields": {
-    "password": "pbkdf2_sha256$1000000$laMXEiDVfqRvssSGsp3RJU$gqus3o/OcyilJD/8pdoK0uQ+CjvJnrYWRpdH/+dlXqA=",
-    "last_login": "2026-04-28T09:13:00Z",
-    "is_superuser": false,
-    "username": "Lab_Mem_QC_001",
-    "first_name": "先生",
-    "last_name": "蔡",
-    "email": "t7878780@gmail.com",
-    "is_staff": false,
-    "is_active": true,
-    "date_joined": "2026-04-28T09:13:00Z",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "role": "lab_member",
-    "status": "active",
-    "joined_at": "2026-04-28T09:14:36.771Z",
-    "groups": [],
-    "user_permissions": []
-  }
-},
-{
-  "model": "users.user",
-  "pk": "3e075b97-34db-4e43-aff2-bc77f43faf5a",
-  "fields": {
-    "password": "pbkdf2_sha256$1000000$GknmDboqn6XGrODbEGkuYi$SZYx1KhaXfFRGoBzaaoB91S71LRVga9RA82/J8Y4WxM=",
-    "last_login": "2026-04-28T09:29:53.386Z",
-    "is_superuser": true,
-    "username": "admin",
-    "first_name": "",
-    "last_name": "",
-    "email": "admin@lab.local",
-    "is_staff": true,
-    "is_active": true,
-    "date_joined": "2026-04-28T06:04:16.215Z",
-    "department": null,
-    "role": "superuser",
-    "status": "active",
-    "joined_at": "2026-04-28T06:04:16.409Z",
-    "groups": [],
-    "user_permissions": []
-  }
-},
-{
-  "model": "users.user",
-  "pk": "6d54574b-2d1e-4fee-9cf1-76e1265599f8",
-  "fields": {
-    "password": "pbkdf2_sha256$1000000$L3GFgMTynTDXo7Wkwine4R$EeY7xEOLJaCI/qIFmXUvkwUcvgOlR1hGnu6pwZoVR2k=",
-    "last_login": "2026-04-28T09:12:00Z",
-    "is_superuser": false,
-    "username": "Lab_Mem_Process_001",
-    "first_name": "先生",
-    "last_name": "王",
-    "email": "t7878780@gmail.com",
-    "is_staff": false,
-    "is_active": true,
-    "date_joined": "2026-04-28T09:12:00Z",
-    "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-    "role": "lab_member",
-    "status": "active",
-    "joined_at": "2026-04-28T09:13:17.277Z",
-    "groups": [],
-    "user_permissions": []
-  }
-},
-{
-  "model": "users.user",
-  "pk": "803b9eb9-836f-4726-8073-721abe8e19d6",
-  "fields": {
-    "password": "pbkdf2_sha256$1000000$RKExQzNftWsDHJv1BO8Vmy$k9JUKLrZPQ5bAMtp2mBo4lFiVUl+A66oqMyrvHwUaZw=",
-    "last_login": null,
-    "is_superuser": false,
-    "username": "Lab_Mgr_Photo",
-    "first_name": "",
-    "last_name": "",
-    "email": "t7878780@gmail.com",
-    "is_staff": false,
-    "is_active": true,
-    "date_joined": "2026-04-28T08:58:00Z",
-    "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
-    "role": "lab_manager",
-    "status": "active",
-    "joined_at": "2026-04-28T08:58:32.532Z",
-    "groups": [],
-    "user_permissions": []
-  }
-},
-{
-  "model": "users.user",
-  "pk": "b217e127-5148-4396-8fe7-4fc88c92c3a8",
-  "fields": {
-    "password": "pbkdf2_sha256$1000000$YDTPc9oHWjecKiBj41Aoyc$SYPti9zQGPiSBUj9+s8+HSKDxQ9C1El4hScNkHVoRyo=",
-    "last_login": null,
-    "is_superuser": false,
-    "username": "Lab_Mgr_QC",
-    "first_name": "",
-    "last_name": "",
-    "email": "t7878780@gmail.com",
-    "is_staff": false,
-    "is_active": true,
-    "date_joined": "2026-04-28T08:58:00Z",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "role": "lab_manager",
-    "status": "active",
-    "joined_at": "2026-04-28T08:58:32.941Z",
-    "groups": [],
-    "user_permissions": []
-  }
-},
-{
-  "model": "users.user",
-  "pk": "db61e5b2-91f9-4c66-9d19-725dc6c42a1e",
-  "fields": {
-    "password": "pbkdf2_sha256$1000000$t5bk811s1XTpTVOIxFMe9j$wfZXWBQd4PYB5aSQMqQIAp5TLw3WpwhmhTcenHvbqZA=",
-    "last_login": "2026-04-28T09:18:00Z",
-    "is_superuser": false,
-    "username": "Lab_Mgr_Process",
-    "first_name": "",
-    "last_name": "",
-    "email": "t7878780@gmail.com",
-    "is_staff": false,
-    "is_active": true,
-    "date_joined": "2026-04-28T08:58:00Z",
-    "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-    "role": "lab_manager",
-    "status": "active",
-    "joined_at": "2026-04-28T08:58:32.739Z",
-    "groups": [],
-    "user_permissions": []
-  }
-},
-{
-  "model": "users.user",
-  "pk": "e6082314-406f-4613-a87e-11ce7a090415",
-  "fields": {
-    "password": "pbkdf2_sha256$1000000$orSvNFwQJKvR6gl6fWzD82$gwWXv+U1QOA3q7tUBI3eMKYtQwEk+pAkmbBreh9obwk=",
-    "last_login": "2026-04-28T09:14:00Z",
-    "is_superuser": false,
-    "username": "Lab_Mem_Photo_001",
-    "first_name": "先生",
-    "last_name": "陳",
-    "email": "t7878780@gmail.com",
-    "is_staff": false,
-    "is_active": true,
-    "date_joined": "2026-04-28T09:14:00Z",
-    "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
-    "role": "lab_member",
-    "status": "active",
-    "joined_at": "2026-04-28T09:15:06.903Z",
-    "groups": [],
-    "user_permissions": []
-  }
-},
-{
-  "model": "equipments.experiment",
-  "pk": "0292a7ed-ebae-4073-9489-58a7d86f3ca7",
-  "fields": {
-    "name": "Full Litho & Metrology Process",
-    "remark": "Complete sequence from Resist Track to EUV Exposure and CD-SEM verification."
-  }
-},
-{
-  "model": "equipments.experiment",
-  "pk": "1fc28a09-8df8-4fb6-aebc-c23f84542050",
-  "fields": {
-    "name": "Surface Planarization & Inspect",
-    "remark": "CMP Polishing and Optical Inspection for flatness."
-  }
-},
-{
-  "model": "equipments.experiment",
-  "pk": "6192dd5f-b1f7-4079-a98e-f0981985df7f",
-  "fields": {
-    "name": "Thin Film & Etch Loop",
-    "remark": "Deposition followed by Plasma Etching and Defect Inspection."
-  }
-},
-{
-  "model": "equipments.experiment",
-  "pk": "c28e6b46-5017-4272-b128-fa632260ebd5",
-  "fields": {
-    "name": "Final Device Testing",
-    "remark": "Wafer probing and final defect check."
-  }
-},
-{
-  "model": "equipments.equipmenttype",
-  "pk": "06a4d753-03c5-48f1-b61e-defbdc30dd43",
-  "fields": {
-    "name": "ALD"
-  }
-},
-{
-  "model": "equipments.equipmenttype",
-  "pk": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
-  "fields": {
-    "name": "Auto Prober"
-  }
-},
-{
-  "model": "equipments.equipmenttype",
-  "pk": "2e19f288-c5f4-448f-8f34-0d22c5620e32",
-  "fields": {
-    "name": "EUV Scanner"
-  }
-},
-{
-  "model": "equipments.equipmenttype",
-  "pk": "2f7fe7f5-f088-4ff5-ba3b-8604f2da2dc9",
-  "fields": {
-    "name": "CMP Polisher"
-  }
-},
-{
-  "model": "equipments.equipmenttype",
-  "pk": "5c7fd124-aa43-4ca7-aeba-6aaad69989cc",
-  "fields": {
-    "name": "Dry Etcher"
-  }
-},
-{
-  "model": "equipments.equipmenttype",
-  "pk": "6047cb79-5232-4160-8955-60e18365c699",
-  "fields": {
-    "name": "CD-SEM"
-  }
-},
-{
-  "model": "equipments.equipmenttype",
-  "pk": "9dc08d1d-e49e-4adc-8a3f-62b7d30957f7",
-  "fields": {
-    "name": "Track System"
-  }
-},
-{
-  "model": "equipments.equipmenttype",
-  "pk": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
-  "fields": {
-    "name": "Inspect Tool"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "0b323f63-0911-4e28-af44-e38e62c773e7",
-  "fields": {
-    "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "code": "INSP-002",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "15b01cd4-3a04-4a96-a294-56915c99672e",
-  "fields": {
-    "equipment_type": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "code": "PROBE-002",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "1a6c52b9-b0b0-432a-8c85-c23e620fa927",
-  "fields": {
-    "equipment_type": "6047cb79-5232-4160-8955-60e18365c699",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "code": "CDSEM-003",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "1f1e73ad-639e-4b1e-86d8-4b5dc3c6b521",
-  "fields": {
-    "equipment_type": "2e19f288-c5f4-448f-8f34-0d22c5620e32",
-    "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
-    "code": "EUV-001",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "2d2fa265-a6f8-49c3-b070-dd14d057e674",
-  "fields": {
-    "equipment_type": "5c7fd124-aa43-4ca7-aeba-6aaad69989cc",
-    "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-    "code": "ETCH-002",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "2fea03f2-ff4a-4f41-a7cb-ea0622993616",
-  "fields": {
-    "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "code": "INSP-001",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "355ae814-d8f5-4751-aede-1d9658b31f5c",
-  "fields": {
-    "equipment_type": "2f7fe7f5-f088-4ff5-ba3b-8604f2da2dc9",
-    "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-    "code": "CMP-001",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "365166a4-7a97-46cf-aa73-d587927fcf88",
-  "fields": {
-    "equipment_type": "06a4d753-03c5-48f1-b61e-defbdc30dd43",
-    "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-    "code": "ALD-002",
-    "status": "occupied"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "40dbb2ac-8846-4e5e-8f7d-74cc3368c5da",
-  "fields": {
-    "equipment_type": "5c7fd124-aa43-4ca7-aeba-6aaad69989cc",
-    "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-    "code": "ETCH-001",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "679dcf5e-fe6b-40de-b430-669b1e155706",
-  "fields": {
-    "equipment_type": "6047cb79-5232-4160-8955-60e18365c699",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "code": "CDSEM-001",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "7a947c1c-943f-47a1-b6a3-5cc4047c9803",
-  "fields": {
-    "equipment_type": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "code": "PROBE-001",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "7f15357e-6b7a-4973-8d11-f2adb1b4745d",
-  "fields": {
-    "equipment_type": "2f7fe7f5-f088-4ff5-ba3b-8604f2da2dc9",
-    "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-    "code": "CMP-002",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "bb1e478e-c635-4b28-9cba-895c6b6de92f",
-  "fields": {
-    "equipment_type": "9dc08d1d-e49e-4adc-8a3f-62b7d30957f7",
-    "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
-    "code": "TRACK-002",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "f2a77ff4-a648-449e-8ed3-fb5a1dd9a36f",
-  "fields": {
-    "equipment_type": "6047cb79-5232-4160-8955-60e18365c699",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "code": "CDSEM-002",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "f87021bc-102d-41cf-993b-c478ffcb3757",
-  "fields": {
-    "equipment_type": "2e19f288-c5f4-448f-8f34-0d22c5620e32",
-    "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
-    "code": "EUV-002",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "f8b7f5d7-246e-4650-a1a3-6d4a9430cb5c",
-  "fields": {
-    "equipment_type": "06a4d753-03c5-48f1-b61e-defbdc30dd43",
-    "department": "b600bf30-4634-4d81-84ba-c655bea71d6f",
-    "code": "ALD-001",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "f98923ce-7b34-4a70-ab61-8fa5a9f00c33",
-  "fields": {
-    "equipment_type": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
-    "department": "534ff707-6d6c-4449-ab60-5cf7820a80f3",
-    "code": "PROBE-003",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.equipment",
-  "pk": "fef9ea18-f11b-4f38-abe4-7243ed666cc6",
-  "fields": {
-    "equipment_type": "9dc08d1d-e49e-4adc-8a3f-62b7d30957f7",
-    "department": "b85ed211-cd8f-46ab-aede-e2533a06153f",
-    "code": "TRACK-001",
-    "status": "available"
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "5578e46d-2407-4207-bafe-151f38fde2c4",
-  "fields": {
-    "experiment": "1fc28a09-8df8-4fb6-aebc-c23f84542050",
-    "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
-    "quantity": 1,
-    "step_order": 2
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "5b80ecf5-60a4-4f00-b6d0-621ecb7e7574",
-  "fields": {
-    "experiment": "0292a7ed-ebae-4073-9489-58a7d86f3ca7",
-    "equipment_type": "9dc08d1d-e49e-4adc-8a3f-62b7d30957f7",
-    "quantity": 1,
-    "step_order": 1
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "5f2fef2d-677a-4931-b56e-65a6a7dc6053",
-  "fields": {
-    "experiment": "c28e6b46-5017-4272-b128-fa632260ebd5",
-    "equipment_type": "0bf356f8-eae1-4c9f-9b1a-c214f929b731",
-    "quantity": 1,
-    "step_order": 1
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "7ae3bb4c-652a-41fc-a28e-d630b58ac5a2",
-  "fields": {
-    "experiment": "1fc28a09-8df8-4fb6-aebc-c23f84542050",
-    "equipment_type": "2f7fe7f5-f088-4ff5-ba3b-8604f2da2dc9",
-    "quantity": 1,
-    "step_order": 1
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "80fbd316-02a1-4042-a68c-73d6283b6528",
-  "fields": {
-    "experiment": "6192dd5f-b1f7-4079-a98e-f0981985df7f",
-    "equipment_type": "06a4d753-03c5-48f1-b61e-defbdc30dd43",
-    "quantity": 1,
-    "step_order": 1
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "97137377-f53a-4441-be3d-97a2364ad8b7",
-  "fields": {
-    "experiment": "c28e6b46-5017-4272-b128-fa632260ebd5",
-    "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
-    "quantity": 1,
-    "step_order": 2
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "c966386a-e3ec-4bdb-bac5-810a161f0a5d",
-  "fields": {
-    "experiment": "6192dd5f-b1f7-4079-a98e-f0981985df7f",
-    "equipment_type": "5c7fd124-aa43-4ca7-aeba-6aaad69989cc",
-    "quantity": 1,
-    "step_order": 2
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "e9f26276-6d39-46f1-8bca-236907e7acc1",
-  "fields": {
-    "experiment": "0292a7ed-ebae-4073-9489-58a7d86f3ca7",
-    "equipment_type": "2e19f288-c5f4-448f-8f34-0d22c5620e32",
-    "quantity": 1,
-    "step_order": 2
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "f235af3e-c154-4ff8-8028-8417e641aa05",
-  "fields": {
-    "experiment": "0292a7ed-ebae-4073-9489-58a7d86f3ca7",
-    "equipment_type": "6047cb79-5232-4160-8955-60e18365c699",
-    "quantity": 1,
-    "step_order": 3
-  }
-},
-{
-  "model": "equipments.experimentrequiredequipment",
-  "pk": "fb8078eb-e934-47f9-9a31-c2fd0076311f",
-  "fields": {
-    "experiment": "6192dd5f-b1f7-4079-a98e-f0981985df7f",
-    "equipment_type": "e8d02e0c-0058-4459-bd62-c8378ba699c0",
-    "quantity": 1,
-    "step_order": 3
-  }
-}
 ]

@@ -190,11 +190,11 @@ function formatDate(value) {
   line-height: 1.6;
 }
 .muted {
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--c-text-muted);
   font-style: italic;
 }
 .muted-text {
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--c-text-muted);
   font-size: 12px;
 }
 </style>

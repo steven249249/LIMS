@@ -127,9 +127,12 @@ class TestAdminUserCRUD:
         assert 'own account' in response.data['detail'].lower()
 
     def test_cannot_delete_last_remaining_superuser(self, db):
-        # Arrange — exactly one user with role=superuser. The deleter passes
-        # IsSystemSuperuser via Django's is_superuser flag instead, so removing
+        # Arrange — clear out the auto-provisioned admin so the only
+        # role=superuser left is the one this test mints. The deleter passes
+        # IsSystemSuperuser via Django's is_superuser flag, so removing
         # `only_superuser` would leave zero role=superuser accounts.
+        from users.models import User
+        User.objects.filter(role='superuser').delete()
         only_superuser = SuperUserFactory()
         other_admin = UserFactory(
             role='lab_manager', is_staff=True, is_superuser=True,

@@ -545,7 +545,7 @@ function formatDate(value) {
   padding: 16px;
 }
 .muted {
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--c-text-muted);
   font-style: italic;
 }
 .schedule-cell {

@@ -97,3 +97,13 @@ body {
 #app {
   min-height: 100vh;
 }
+
+/* Force ant-design empty/placeholder copy to follow our muted-text token —
+ * antd's locale strings are coloured by the global token but a few stubborn
+ * descriptions ("無此資料", "暫無資料") render too dark against a dark card. */
+:root[data-theme='dark'] .ant-empty,
+:root[data-theme='dark'] .ant-empty-description,
+:root[data-theme='dark'] .ant-table-placeholder,
+:root[data-theme='dark'] .ant-table-placeholder .ant-empty-description {
+  color: var(--c-text-muted);
+}

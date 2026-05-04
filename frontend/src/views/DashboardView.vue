@@ -233,6 +233,6 @@ function goAdmin() { router.push('/admin') }
   padding: 0;
 }
 .muted {
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--c-text-muted);
 }
 </style>

@@ -483,7 +483,7 @@ defineExpose({ reload: loadData, clearSelection })
   gap: 12px;
 }
 .field-help {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--c-text-muted);
   font-size: 12px;
   line-height: 1.4;
   margin-top: 2px;

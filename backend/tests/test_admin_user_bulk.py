@@ -183,8 +183,9 @@ class TestBulkDelete:
         assert User.objects.filter(pk=superuser.id).exists()
 
     def test_skips_when_would_remove_last_superuser(self, db):
-        # Arrange — exactly one superuser; another admin (is_superuser flag)
-        # tries to delete it
+        # Arrange — clear out the auto-provisioned admin so we can simulate
+        # the "exactly one superuser left" condition.
+        User.objects.filter(role='superuser').delete()
         only_superuser = SuperUserFactory()
         from rest_framework.test import APIClient
         from rest_framework_simplejwt.tokens import RefreshToken

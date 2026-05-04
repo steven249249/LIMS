@@ -398,7 +398,7 @@ function formatDate(value) {
 }
 .stat-foot {
   margin-top: 12px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--c-text-muted);
   font-size: 12px;
 }
 .row-status {
@@ -407,13 +407,13 @@ function formatDate(value) {
   width: 100%;
 }
 .footer-note {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--c-text-muted);
   font-size: 12px;
 }
 .generated-at {
   margin-top: 16px;
   text-align: right;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--c-text-muted);
   font-size: 12px;
 }
 </style>
