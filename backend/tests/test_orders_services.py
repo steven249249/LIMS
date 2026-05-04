@@ -148,6 +148,32 @@ class TestApproveAndScheduleStage:
         assert result.status == OrderStage.Status.IN_PROGRESS
         assert result.schedule_start.isoformat().startswith('2026-05-02')
 
+    @freeze_time('2026-05-01 10:00:00')
+    def test_assignee_as_uuid_string_does_not_break_notification(
+        self, db, order, equipment_type, lab_member, mocker,
+    ):
+        """Regression: PATCH /api/orders/stages/<id>/review/ passes the
+        assignee field as a raw UUID string from request.data, not a User
+        instance. _send_notification used to call .username on it and crash
+        with AttributeError, surfacing as a 500 to the manager UI."""
+        # Arrange
+        mocker.patch(
+            'scheduling.services.allocate_equipments_for_stage', return_value=[],
+        )
+        stage = OrderStageFactory(
+            order=order, equipment_type=equipment_type, status=OrderStage.Status.WAITING,
+        )
+        # Act — pass assignee as a UUID string, the way the view layer does
+        result = services.approve_and_schedule_stage(
+            stage,
+            schedule_start='2026-05-02T10:00:00Z',
+            schedule_end='2026-05-02T12:00:00Z',
+            assignee=str(lab_member.id),
+        )
+        # Assert — no AttributeError + assignee was correctly bound to the user
+        assert result.status == OrderStage.Status.IN_PROGRESS
+        assert str(result.assignee_id) == str(lab_member.id)
+
 
 @pytest.mark.unit
 class TestCompleteStage:

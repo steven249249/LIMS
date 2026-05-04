@@ -19,10 +19,25 @@ User = get_user_model()
 
 
 def _send_notification(user, message):
-    """Simulates sending a notification (Email/Socket/Push)."""
+    """Simulates sending a notification (Email/Socket/Push).
+
+    Accepts either a ``User`` instance or a primary-key string/UUID — callers
+    in the relay flow sometimes pass the raw ``request.data['assignee']`` value
+    that originated as a UUID string, so this helper resolves it into a User
+    rather than relying on every caller to do so.
+    """
     if not user:
         print(f"[SYSTEM] Notification skipped: No user provided. Message: {message}")
         return
+    if not hasattr(user, 'username'):
+        # PK string/UUID — try to resolve once. Bail silently if not found.
+        try:
+            user = User.objects.filter(pk=user).first()
+        except (ValueError, TypeError):
+            user = None
+        if user is None:
+            print(f"[SYSTEM] Notification skipped: user not found. Message: {message}")
+            return
     print(f"[NOTIFICATION] User {user.username}: {message}")
 
 
