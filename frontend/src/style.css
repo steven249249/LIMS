@@ -1,16 +1,17 @@
 /* ──────────────────────────────────────────────────────────────────────────
- * src/style.css — Global tokens and minimal resets.
+ * src/style.css — Global tokens, minimal resets, theme switching.
  *
  * Most styling is delegated to ant-design-vue. This file keeps only:
  *   1. The font import for the entire app.
  *   2. CSS custom properties consumed by legacy components (TimelineChart)
  *      that have not been ported to antd.
- *   3. A handful of utility classes still referenced from outside scoped
- *      style blocks.
+ *   3. Light/dark theme variables. Activated via the `data-theme` attribute
+ *      on <html>, set by stores/settings.js.
  * ──────────────────────────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-:root {
+:root,
+:root[data-theme='light'] {
   --c-bg: #f5f7fa;
   --c-bg-card: #ffffff;
   --c-surface: #ffffff;
@@ -18,6 +19,21 @@
   --c-border: #e8eaef;
   --c-text: rgba(0, 0, 0, 0.85);
   --c-text-muted: rgba(0, 0, 0, 0.45);
+  --c-primary: #1890ff;
+  --c-success: #52c41a;
+  --c-warning: #faad14;
+  --c-danger: #f5222d;
+  --c-info: #1890ff;
+}
+
+:root[data-theme='dark'] {
+  --c-bg: #141414;
+  --c-bg-card: #1f1f1f;
+  --c-surface: #1f1f1f;
+  --c-surface-hover: #262626;
+  --c-border: #303030;
+  --c-text: rgba(255, 255, 255, 0.85);
+  --c-text-muted: rgba(255, 255, 255, 0.45);
   --c-primary: #1890ff;
   --c-success: #52c41a;
   --c-warning: #faad14;
@@ -49,6 +65,7 @@ body {
   background: var(--c-bg);
   color: var(--c-text);
   line-height: 1.6;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 #app {

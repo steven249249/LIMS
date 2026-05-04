@@ -1,7 +1,7 @@
 <template>
   <div class="dash">
     <a-page-header
-      :title="`歡迎,${auth.user?.username || '使用者'}`"
+      :title="t('dashboard.welcome', { name: auth.user?.username || '—' })"
       :sub-title="welcomeSub"
       :back-icon="false"
     >
@@ -11,7 +11,7 @@
         </a-tag>
         <a-button v-if="canCreateOrder" type="primary" @click="goCreate">
           <template #icon><FileAddOutlined /></template>
-          新建訂單
+          {{ t('nav.createOrder') }}
         </a-button>
       </template>
     </a-page-header>
@@ -20,7 +20,7 @@
       <a-col :xs="24" :sm="12" :md="6">
         <a-card hoverable>
           <a-statistic
-            title="訂單總數"
+            :title="t('dashboard.totalOrders')"
             :value="stats.total"
             :value-style="{ color: '#1890ff' }"
           >
@@ -31,7 +31,7 @@
       <a-col :xs="24" :sm="12" :md="6">
         <a-card hoverable>
           <a-statistic
-            title="等待中"
+            :title="t('dashboard.waiting')"
             :value="stats.waiting"
             :value-style="{ color: '#faad14' }"
           >
@@ -42,7 +42,7 @@
       <a-col :xs="24" :sm="12" :md="6">
         <a-card hoverable>
           <a-statistic
-            title="進行中"
+            :title="t('dashboard.inProgress')"
             :value="stats.in_progress"
             :value-style="{ color: '#722ed1' }"
           >
@@ -53,7 +53,7 @@
       <a-col :xs="24" :sm="12" :md="6">
         <a-card hoverable>
           <a-statistic
-            title="已完成"
+            :title="t('dashboard.done')"
             :value="stats.done"
             :value-style="{ color: '#52c41a' }"
           >
@@ -65,7 +65,7 @@
 
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
       <a-col :xs="24" :md="16">
-        <a-card title="最近訂單" :bordered="false" :body-style="{ padding: 0 }">
+        <a-card :title="t('dashboard.recentOrders')" :bordered="false" :body-style="{ padding: 0 }">
           <a-table
             :columns="orderColumns"
             :data-source="recentOrders"
@@ -84,45 +84,45 @@
                 {{ formatDate(record.created_at) }}
               </template>
               <template v-else-if="column.dataIndex === 'is_urgent'">
-                <a-tag v-if="record.is_urgent" color="red">緊急</a-tag>
+                <a-tag v-if="record.is_urgent" color="red">{{ t('orders.urgent') }}</a-tag>
                 <span v-else class="muted">—</span>
               </template>
             </template>
           </a-table>
           <a-empty
             v-if="!loading && !recentOrders.length"
-            description="目前尚無訂單"
+            :description="t('dashboard.noOrders')"
             style="padding: 40px 0"
           />
         </a-card>
       </a-col>
 
       <a-col :xs="24" :md="8">
-        <a-card title="快速操作" :bordered="false">
+        <a-card :title="t('dashboard.quickActions')" :bordered="false">
           <a-space direction="vertical" size="middle" style="width: 100%">
             <a-button v-if="canCreateOrder" block size="large" type="primary" @click="goCreate">
               <template #icon><FileAddOutlined /></template>
-              送樣申請
+              {{ t('nav.createOrder') }}
             </a-button>
             <a-button v-if="canCreateOrder" block size="large" @click="goOrders">
               <template #icon><UnorderedListOutlined /></template>
-              我的訂單
+              {{ t('nav.myOrders') }}
             </a-button>
             <a-button v-if="auth.isManager" block size="large" @click="goReview">
               <template #icon><CheckCircleOutlined /></template>
-              審核訂單
+              {{ t('nav.review') }}
             </a-button>
             <a-button v-if="auth.isMember" block size="large" @click="goTasks">
               <template #icon><ThunderboltOutlined /></template>
-              實驗室任務
+              {{ t('nav.tasks') }}
             </a-button>
             <a-button block size="large" @click="goEquipment">
               <template #icon><AppstoreOutlined /></template>
-              設備總覽
+              {{ t('nav.equipment') }}
             </a-button>
             <a-button v-if="auth.isSuperuser" block size="large" type="primary" ghost @click="goAdmin">
               <template #icon><DashboardOutlined /></template>
-              管理後台
+              {{ t('nav.adminConsole') }}
             </a-button>
           </a-space>
         </a-card>
@@ -134,6 +134,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import {
   AppstoreOutlined,
@@ -151,38 +152,35 @@ import { fetchOrders } from '../api/orders'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t } = useI18n()
 
 const stats = ref({ total: 0, waiting: 0, in_progress: 0, done: 0 })
 const recentOrders = ref([])
 const loading = ref(false)
 
-const orderColumns = [
-  { title: '訂單編號', dataIndex: 'order_no', width: 180 },
-  { title: '實驗', dataIndex: 'experiment_name' },
-  { title: 'Lot ID', dataIndex: 'lot_id', width: 110 },
-  { title: '緊急', dataIndex: 'is_urgent', width: 80 },
-  { title: '狀態', dataIndex: 'status', width: 110 },
-  { title: '建立時間', dataIndex: 'created_at', width: 170 },
-]
+const orderColumns = computed(() => [
+  { title: t('orders.orderNo'), dataIndex: 'order_no', width: 180 },
+  { title: t('orders.experiment'), dataIndex: 'experiment_name' },
+  { title: t('orders.lotId'), dataIndex: 'lot_id', width: 110 },
+  { title: t('orders.urgent'), dataIndex: 'is_urgent', width: 80 },
+  { title: t('orders.status'), dataIndex: 'status', width: 110 },
+  { title: t('orders.createdAt'), dataIndex: 'created_at', width: 170 },
+])
 
-const ROLE_LABELS = {
-  superuser: '系統管理員',
-  lab_manager: '實驗室經理',
-  lab_member: '實驗室成員',
-  regular_employee: '一般員工',
-}
 const ROLE_COLORS = {
   superuser: 'red',
   lab_manager: 'geekblue',
   lab_member: 'cyan',
   regular_employee: 'default',
 }
-const roleLabel = computed(() => ROLE_LABELS[auth.role] || auth.role || '—')
+const roleLabel = computed(() =>
+  auth.role ? t(`roles.${auth.role}`) : '—',
+)
 const roleColor = computed(() => ROLE_COLORS[auth.role] || 'default')
 
 const welcomeSub = computed(() => {
   const today = dayjs().format('YYYY-MM-DD dddd')
-  return `今天是 ${today},祝有美好的一天`
+  return t('dashboard.todayIs', { date: today })
 })
 
 const canCreateOrder = computed(
@@ -209,10 +207,7 @@ onMounted(async () => {
 })
 
 function statusLabel(s) {
-  return {
-    created: '已建立', waiting: '等待中', in_progress: '進行中',
-    done: '完成', rejected: '駁回',
-  }[s] || s
+  return t(`orders.statusLabels.${s}`, s)
 }
 function statusColor(s) {
   return {

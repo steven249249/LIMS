@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { createI18n } from 'vue-i18n'
 
 vi.mock('../src/api/users', () => ({
   login: vi.fn(),
@@ -18,6 +19,16 @@ vi.mock('../src/api/users', () => ({
 
 import { login as apiLogin, fetchProfile } from '../src/api/users'
 import LoginView from '../src/views/LoginView.vue'
+import zhTW from '../src/i18n/zh-TW'
+
+function makeI18n() {
+  return createI18n({
+    legacy: false,
+    locale: 'zh-TW',
+    fallbackLocale: 'zh-TW',
+    messages: { 'zh-TW': zhTW },
+  })
+}
 
 function makeRouter() {
   return createRouter({
@@ -47,7 +58,7 @@ describe('LoginView', () => {
     const router = makeRouter()
     await router.push('/login')
     const wrapper = mount(LoginView, {
-      global: { plugins: [router], stubs: STUBS },
+      global: { plugins: [router, makeI18n()], stubs: STUBS },
     })
     // Assert — the script setup wires up a reactive form for both fields
     expect(wrapper.vm.form).toBeDefined()
@@ -63,7 +74,7 @@ describe('LoginView', () => {
     const router = makeRouter()
     await router.push('/login')
     const wrapper = mount(LoginView, {
-      global: { plugins: [router], stubs: STUBS },
+      global: { plugins: [router, makeI18n()], stubs: STUBS },
     })
     // Act — set up the reactive form state, then trigger submit
     wrapper.vm.form.username = 'alice'
@@ -83,7 +94,7 @@ describe('LoginView', () => {
     const router = makeRouter()
     await router.push('/login')
     const wrapper = mount(LoginView, {
-      global: { plugins: [router], stubs: STUBS },
+      global: { plugins: [router, makeI18n()], stubs: STUBS },
     })
     // Act
     wrapper.vm.form.username = 'alice'
@@ -100,7 +111,7 @@ describe('LoginView', () => {
     const router = makeRouter()
     await router.push('/login')
     const wrapper = mount(LoginView, {
-      global: { plugins: [router], stubs: STUBS },
+      global: { plugins: [router, makeI18n()], stubs: STUBS },
     })
     // Act
     wrapper.vm.form.username = 'a'

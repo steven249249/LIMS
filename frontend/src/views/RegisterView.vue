@@ -6,19 +6,19 @@
     <a-card class="auth-card" :bordered="false">
       <div class="auth-brand">
         <UserAddOutlined class="brand-icon" />
-        <h1 class="brand-title">註冊新帳號</h1>
-        <p class="brand-subtitle">加入 LIMS,開始使用實驗室排程系統</p>
+        <h1 class="brand-title">{{ t('auth.register') }}</h1>
+        <p class="brand-subtitle">{{ t('auth.registerSubtitle') }}</p>
       </div>
 
       <a-result
         v-if="success"
         status="success"
-        title="註冊成功!"
-        sub-title="您現在可以登入使用系統"
+        :title="t('auth.registerSuccess')"
+        :sub-title="t('auth.registerSuccessSubtitle')"
       >
         <template #extra>
           <router-link to="/login">
-            <a-button type="primary" size="large">前往登入</a-button>
+            <a-button type="primary" size="large">{{ t('auth.login') }}</a-button>
           </router-link>
         </template>
       </a-result>
@@ -30,24 +30,23 @@
         @finish="handleRegister"
       >
         <a-form-item
-          label="Username"
+          :label="t('auth.username')"
           name="username"
           :rules="[
-            { required: true, message: '請輸入帳號' },
-            { min: 3, message: '帳號至少 3 字元' },
+            { required: true, message: t('auth.loginPrompt') },
+            { min: 3, message: t('auth.minUsername') },
           ]"
         >
-          <a-input v-model:value="form.username" placeholder="3 字元以上">
+          <a-input v-model:value="form.username">
             <template #prefix><UserOutlined /></template>
           </a-input>
         </a-form-item>
 
         <a-form-item
-          label="Email"
+          :label="t('auth.email')"
           name="email"
           :rules="[
-            { required: true, message: '請輸入 Email' },
-            { type: 'email', message: '需為合法 Email 格式' },
+            { required: true, type: 'email', message: t('auth.requireEmail') },
           ]"
         >
           <a-input v-model:value="form.email" placeholder="example@lims.local">
@@ -56,27 +55,27 @@
         </a-form-item>
 
         <a-form-item
-          label="密碼"
+          :label="t('auth.password')"
           name="password"
           :rules="[
-            { required: true, message: '請輸入密碼' },
-            { min: 8, message: '密碼至少 8 字元' },
+            { required: true, message: t('auth.passwordPrompt') },
+            { min: 8, message: t('auth.minPassword') },
           ]"
         >
-          <a-input-password v-model:value="form.password" placeholder="至少 8 字元">
+          <a-input-password v-model:value="form.password" :placeholder="t('auth.minPassword')">
             <template #prefix><LockOutlined /></template>
           </a-input-password>
         </a-form-item>
 
         <a-form-item
-          label="姓名"
+          :label="t('auth.fullName')"
           name="first_name"
-          :rules="[{ required: true, message: '請輸入姓名' }]"
+          :rules="[{ required: true, message: t('auth.fullName') }]"
         >
-          <a-input v-model:value="form.first_name" placeholder="顯示名稱" />
+          <a-input v-model:value="form.first_name" />
         </a-form-item>
 
-        <a-form-item label="角色" name="role">
+        <a-form-item :label="t('auth.role')" name="role">
           <a-select v-model:value="form.role" :options="roleOptions" />
         </a-form-item>
 
@@ -96,12 +95,12 @@
           block
           size="large"
         >
-          建立帳號
+          {{ t('auth.submit') }}
         </a-button>
 
         <div class="back-link">
-          已有帳號?
-          <router-link to="/login">回登入頁</router-link>
+          {{ t('auth.haveAccount') }}
+          <router-link to="/login">{{ t('auth.backToLogin') }}</router-link>
         </div>
       </a-form>
     </a-card>
@@ -109,7 +108,8 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   LockOutlined,
   MailOutlined,
@@ -117,6 +117,8 @@ import {
   UserOutlined,
 } from '@ant-design/icons-vue'
 import client from '../api/client'
+
+const { t } = useI18n()
 
 const form = reactive({
   username: '',
@@ -127,11 +129,11 @@ const form = reactive({
   role: 'regular_employee',
 })
 
-const roleOptions = [
-  { value: 'regular_employee', label: '一般員工 (送樣申請)' },
-  { value: 'lab_manager', label: '實驗室經理' },
-  { value: 'lab_member', label: '實驗室成員' },
-]
+const roleOptions = computed(() => [
+  { value: 'regular_employee', label: t('roles.regular_employee') },
+  { value: 'lab_manager', label: t('roles.lab_manager') },
+  { value: 'lab_member', label: t('roles.lab_member') },
+])
 
 const loading = ref(false)
 const error = ref('')
@@ -150,7 +152,7 @@ async function handleRegister() {
     else if (data && typeof data === 'object') {
       const k = Object.keys(data)[0]
       error.value = `${k}: ${Array.isArray(data[k]) ? data[k].join(', ') : data[k]}`
-    } else error.value = '註冊失敗'
+    } else error.value = t('auth.registerFailed')
   } finally {
     loading.value = false
   }

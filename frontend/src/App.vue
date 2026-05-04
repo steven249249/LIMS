@@ -1,25 +1,28 @@
 <template>
-  <a-config-provider :locale="zhTW">
+  <a-config-provider
+    :locale="antdLocale"
+    :theme="antdTheme"
+  >
     <!-- Guest views and the standalone /admin shell render their own layout. -->
     <router-view v-if="!showAppShell" />
 
     <!-- Default authenticated shell: collapsible sider + header + content. -->
-    <a-layout v-else class="app-shell">
+    <a-layout v-else class="app-shell" :class="{ 'is-dark': settings.isDark }">
       <a-layout-sider
         v-model:collapsed="collapsed"
         collapsible
         :width="232"
-        theme="light"
+        :theme="settings.isDark ? 'dark' : 'light'"
         class="app-sider"
       >
         <div class="brand">
           <ExperimentOutlined class="brand-icon" />
-          <span v-if="!collapsed" class="brand-text">Lab Booking</span>
+          <span v-if="!collapsed" class="brand-text">{{ t('common.appName') }}</span>
         </div>
         <a-menu
           v-model:selectedKeys="selectedKeys"
           mode="inline"
-          theme="light"
+          :theme="settings.isDark ? 'dark' : 'light'"
           :items="menuItems"
           @click="onMenuClick"
         />
@@ -36,16 +39,21 @@
           </div>
 
           <div class="header-right">
+            <a-tooltip :title="t('settings.title')">
+              <a-button type="text" @click="settingsOpen = true">
+                <template #icon><SettingOutlined /></template>
+              </a-button>
+            </a-tooltip>
             <a-button v-if="auth.isSuperuser" type="primary" @click="goAdmin">
               <template #icon><ThunderboltOutlined /></template>
-              管理後台
+              {{ t('nav.adminConsole') }}
             </a-button>
             <a-dropdown>
               <a-button type="text" class="user-trigger">
                 <a-avatar style="background-color: #1890ff" size="small">
                   {{ avatarLetter }}
                 </a-avatar>
-                <span class="username">{{ auth.user?.username || '使用者' }}</span>
+                <span class="username">{{ auth.user?.username || '—' }}</span>
                 <DownOutlined />
               </a-button>
               <template #overlay>
@@ -56,12 +64,12 @@
                   </a-menu-item>
                   <a-menu-item key="role" disabled>
                     <SafetyOutlined />
-                    <span>角色: {{ roleLabel }}</span>
+                    <span>{{ t('dashboard.role') }}: {{ roleLabel }}</span>
                   </a-menu-item>
                   <a-menu-divider />
                   <a-menu-item key="logout" danger>
                     <LogoutOutlined />
-                    <span>登出</span>
+                    <span>{{ t('auth.logout') }}</span>
                   </a-menu-item>
                 </a-menu>
               </template>
@@ -78,19 +86,59 @@
         </a-layout-content>
 
         <a-layout-footer class="app-footer">
-          LIMS · Semiconductor FAB Relay Management System
+          {{ t('common.appName') }} · {{ t('common.appSubtitle') }}
         </a-layout-footer>
       </a-layout>
     </a-layout>
+
+    <!-- Settings drawer: language + theme. Available everywhere. -->
+    <a-drawer
+      v-model:open="settingsOpen"
+      :title="t('settings.title')"
+      placement="right"
+      :width="320"
+    >
+      <a-form layout="vertical">
+        <a-form-item :label="t('settings.language')">
+          <a-radio-group
+            v-model:value="settings.locale"
+            button-style="solid"
+            @change="onLocaleChange"
+          >
+            <a-radio-button value="zh-TW">中文</a-radio-button>
+            <a-radio-button value="en">English</a-radio-button>
+          </a-radio-group>
+        </a-form-item>
+
+        <a-form-item :label="t('settings.theme')">
+          <a-radio-group
+            v-model:value="settings.theme"
+            button-style="solid"
+          >
+            <a-radio-button value="light">
+              <BulbOutlined />&nbsp;{{ t('settings.light') }}
+            </a-radio-button>
+            <a-radio-button value="dark">
+              <BulbFilled />&nbsp;{{ t('settings.dark') }}
+            </a-radio-button>
+          </a-radio-group>
+        </a-form-item>
+      </a-form>
+    </a-drawer>
   </a-config-provider>
 </template>
 
 <script setup>
 import { computed, h, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import zhTW from 'ant-design-vue/es/locale/zh_TW'
+import { useI18n } from 'vue-i18n'
+import { theme as antdThemeApi } from 'ant-design-vue'
+import zhTWLocale from 'ant-design-vue/es/locale/zh_TW'
+import enUSLocale from 'ant-design-vue/es/locale/en_US'
 import {
   AppstoreOutlined,
+  BulbFilled,
+  BulbOutlined,
   CheckCircleOutlined,
   DashboardOutlined,
   DownOutlined,
@@ -101,17 +149,43 @@ import {
   MenuUnfoldOutlined,
   ProfileOutlined,
   SafetyOutlined,
+  SettingOutlined,
   ThunderboltOutlined,
   UnorderedListOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue'
 import { useAuthStore } from './stores/auth'
+import { useSettingsStore } from './stores/settings'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const route = useRoute()
 const router = useRouter()
+const { t, locale: i18nLocale } = useI18n()
 
 const collapsed = ref(false)
+const settingsOpen = ref(false)
+
+// Keep vue-i18n's active locale in lockstep with the persisted settings.
+watch(
+  () => settings.locale,
+  (v) => {
+    i18nLocale.value = v
+  },
+  { immediate: true },
+)
+
+function onLocaleChange() {
+  // Touching the radio already flipped settings.locale; the watch above
+  // propagates it to vue-i18n. This handler exists so future analytics
+  // hooks have a single entry point.
+}
+
+const antdLocale = computed(() => (settings.locale === 'en' ? enUSLocale : zhTWLocale))
+const antdTheme = computed(() => ({
+  algorithm: settings.isDark ? antdThemeApi.darkAlgorithm : antdThemeApi.defaultAlgorithm,
+  token: { colorPrimary: '#1890ff' },
+}))
 
 /** Routes that render their own layout. */
 const STANDALONE_PREFIXES = ['/login', '/register', '/admin']
@@ -121,38 +195,37 @@ const showAppShell = computed(() => {
   return !STANDALONE_PREFIXES.some((p) => route.path.startsWith(p))
 })
 
-/** Menu config: {key, label, icon, path, visible: () => boolean} */
 const menuConfig = computed(() => [
-  { key: 'dashboard', label: '儀表板', icon: DashboardOutlined, path: '/' },
+  { key: 'dashboard', label: t('nav.dashboard'), icon: DashboardOutlined, path: '/' },
   {
     key: 'my-orders',
-    label: '我的訂單',
+    label: t('nav.myOrders'),
     icon: ProfileOutlined,
     path: '/orders',
     visible: () => auth.role === 'regular_employee' || auth.isSuperuser,
   },
   {
     key: 'create-order',
-    label: '送樣申請',
+    label: t('nav.createOrder'),
     icon: FileAddOutlined,
     path: '/orders/create',
     visible: () => auth.role === 'regular_employee' || auth.isSuperuser,
   },
   {
     key: 'review',
-    label: '訂單審核',
+    label: t('nav.review'),
     icon: CheckCircleOutlined,
     path: '/orders/review',
     visible: () => auth.isManager,
   },
   {
     key: 'tasks',
-    label: '實驗室任務',
+    label: t('nav.tasks'),
     icon: UnorderedListOutlined,
     path: '/orders/tasks',
     visible: () => auth.isMember,
   },
-  { key: 'equipment', label: '設備總覽', icon: AppstoreOutlined, path: '/equipment' },
+  { key: 'equipment', label: t('nav.equipment'), icon: AppstoreOutlined, path: '/equipment' },
 ])
 
 const visibleMenu = computed(() =>
@@ -184,7 +257,6 @@ watch(
 )
 
 function deriveKey(path) {
-  // longest-prefix match so /orders/create wins over /orders
   const sorted = [...visibleMenu.value].sort((a, b) => b.path.length - a.path.length)
   const match = sorted.find((m) => path === m.path || path.startsWith(m.path + '/'))
   if (match) return match.key
@@ -192,19 +264,15 @@ function deriveKey(path) {
   return ''
 }
 
-const pageHeading = computed(() => labelByKey.value[selectedKeys.value[0]] || 'LIMS')
+const pageHeading = computed(() => labelByKey.value[selectedKeys.value[0]] || t('common.appName'))
 
 const avatarLetter = computed(
   () => (auth.user?.username || '?').charAt(0).toUpperCase(),
 )
 
-const ROLE_LABELS = {
-  superuser: '系統管理員',
-  lab_manager: '實驗室經理',
-  lab_member: '實驗室成員',
-  regular_employee: '一般員工',
-}
-const roleLabel = computed(() => ROLE_LABELS[auth.role] || auth.role || '—')
+const roleLabel = computed(() =>
+  auth.role ? t(`roles.${auth.role}`) : '—',
+)
 
 function onMenuClick({ key }) {
   const path = pathByKey.value[key]
@@ -258,7 +326,6 @@ function goAdmin() {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #fff;
   box-shadow: 0 1px 4px rgba(0, 21, 41, 0.06);
   height: 64px;
 }
@@ -273,13 +340,12 @@ function goAdmin() {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.85);
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .user-trigger {
@@ -298,7 +364,6 @@ function goAdmin() {
 
 .app-footer {
   text-align: center;
-  color: rgba(0, 0, 0, 0.45);
   background: transparent;
   padding: 16px;
 }

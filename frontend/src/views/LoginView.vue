@@ -6,8 +6,8 @@
     <a-card class="auth-card" :bordered="false">
       <div class="auth-brand">
         <ExperimentOutlined class="brand-icon" />
-        <h1 class="brand-title">LIMS</h1>
-        <p class="brand-subtitle">Semiconductor FAB Relay Management</p>
+        <h1 class="brand-title">{{ t('common.appName') }}</h1>
+        <p class="brand-subtitle">{{ t('common.appSubtitle') }}</p>
       </div>
 
       <a-form
@@ -17,14 +17,14 @@
         @finish="handleLogin"
       >
         <a-form-item
-          label="Username"
+          :label="t('auth.username')"
           name="username"
-          :rules="[{ required: true, message: '請輸入帳號' }]"
+          :rules="[{ required: true, message: t('auth.loginPrompt') }]"
         >
           <a-input
             v-model:value="form.username"
             size="large"
-            placeholder="請輸入帳號"
+            :placeholder="t('auth.loginPrompt')"
             autocomplete="username"
           >
             <template #prefix><UserOutlined /></template>
@@ -32,14 +32,14 @@
         </a-form-item>
 
         <a-form-item
-          label="Password"
+          :label="t('auth.password')"
           name="password"
-          :rules="[{ required: true, message: '請輸入密碼' }]"
+          :rules="[{ required: true, message: t('auth.passwordPrompt') }]"
         >
           <a-input-password
             v-model:value="form.password"
             size="large"
-            placeholder="請輸入密碼"
+            :placeholder="t('auth.passwordPrompt')"
             autocomplete="current-password"
           >
             <template #prefix><LockOutlined /></template>
@@ -62,16 +62,16 @@
           block
           size="large"
         >
-          登入
+          {{ t('auth.login') }}
         </a-button>
       </a-form>
 
       <a-divider plain style="margin: 24px 0 16px; color: rgba(0, 0, 0, 0.35)">
-        尚未有帳號?
+        {{ t('auth.noAccount') }}
       </a-divider>
 
       <router-link to="/register">
-        <a-button block size="large">註冊新帳號</a-button>
+        <a-button block size="large">{{ t('auth.register') }}</a-button>
       </router-link>
     </a-card>
   </div>
@@ -80,6 +80,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   ExperimentOutlined,
   LockOutlined,
@@ -89,6 +90,7 @@ import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t } = useI18n()
 
 const form = reactive({ username: '', password: '' })
 const loading = ref(false)
@@ -101,7 +103,7 @@ async function handleLogin() {
     await auth.login(form.username, form.password)
     router.push('/')
   } catch (e) {
-    error.value = e.response?.data?.detail || '登入失敗,請檢查帳號或密碼'
+    error.value = e.response?.data?.detail || t('auth.loginFailed')
   } finally {
     loading.value = false
   }
