@@ -31,10 +31,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev -- --port 5173',
+    // CI runners default localhost → ::1 (IPv6) but Playwright probes
+    // 127.0.0.1 (IPv4); pin Vite to IPv4 with --host to make them agree.
+    command: 'npm run dev -- --port 5173 --host 127.0.0.1',
     url: 'http://127.0.0.1:5173',
     reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
+    timeout: 120_000,
     stdout: 'pipe',
     stderr: 'pipe',
   },
