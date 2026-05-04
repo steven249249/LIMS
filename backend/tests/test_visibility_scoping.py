@@ -120,6 +120,38 @@ class TestOrderDetailVisibility:
         # Assert
         assert response.status_code == 404
 
+    def test_detail_response_includes_relay_stages(
+        self, db, employee_client, employee, equipment_type,
+    ):
+        """Regression: the detail drawer renders a relay-progress Steps
+        component off `selectedOrder.stages`. The detail serializer used to
+        omit that list, so the tracker silently disappeared from the UI."""
+        # Arrange — own order with two stages (multi-step relay)
+        order = OrderFactory(user=employee, department=employee.department)
+        first = OrderStageFactory(
+            order=order, step_order=1,
+            equipment_type=equipment_type, department=employee.department,
+            status='done',
+        )
+        second = OrderStageFactory(
+            order=order, step_order=2,
+            equipment_type=equipment_type, department=employee.department,
+            status='in_progress',
+        )
+        # Act
+        response = employee_client.get(f'/api/orders/{order.id}/')
+        # Assert — stages are present, ordered, and carry the labels the UI uses
+        assert response.status_code == 200
+        assert 'stages' in response.data
+        stage_ids = [s['id'] for s in response.data['stages']]
+        assert str(first.id) in stage_ids
+        assert str(second.id) in stage_ids
+        for s in response.data['stages']:
+            assert 'step_order' in s
+            assert 'status' in s
+            assert 'equipment_type_name' in s
+            assert 'department_name' in s
+
 
 @pytest.mark.integration
 class TestOrderStageListVisibility:

@@ -50,6 +50,10 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
     assignee_name = serializers.CharField(source='assignee.username', read_only=True)
     experiment_details = serializers.SerializerMethodField()
+    # The detail drawer in the requester UI renders a relay-progress
+    # ant-design Steps component off this list; without it the tracker
+    # silently disappears.
+    stages = OrderStageSerializer(many=True, read_only=True)
 
     def get_experiment_details(self, obj):
         from equipments.serializers import ExperimentSerializer
@@ -66,6 +70,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'schedule_start', 'schedule_end',
             'rejection_reason', 'remark',
             'created_at', 'updated_at', 'ended_at',
+            'stages',
         ]
         read_only_fields = [
             'id', 'order_no', 'status', 'rejection_reason', 'assignee_name',
