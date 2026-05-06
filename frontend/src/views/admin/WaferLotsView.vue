@@ -6,6 +6,7 @@
     :subtitle="t('admin.pages.waferLots.subtitle')"
     :search-placeholder="t('admin.pages.waferLots.search')"
     default-ordering="code"
+    row-key="code"
     :columns="columns"
     :form-fields="formFields"
   />

@@ -39,8 +39,9 @@ class WaferLotSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WaferLot
-        fields = ('id', 'fab', 'fab_name', 'code', 'notes', 'created_at')
-        read_only_fields = ('id', 'created_at')
+        # ``code`` is the primary key — there is no separate id column.
+        fields = ('code', 'fab', 'fab_name', 'notes', 'created_at')
+        read_only_fields = ('created_at',)
 
 
 class UserSerializer(serializers.ModelSerializer):
