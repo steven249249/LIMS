@@ -1,0 +1,79 @@
+# Caddy 設定 — 生產環境
+#
+# 這份檔案讓 Caddy 同時做三件事:
+#   1. 自動向 Let's Encrypt 申請 + 續期 TLS 憑證 (HTTPS / port 443)
+#   2. HTTP → HTTPS 自動重導
+#   3. /api/* → Django backend (gunicorn) 反向代理
+#   4. 其他路徑 → Vue SPA 靜態檔(history fallback to /index.html)
+#
+# 部署的機器必須:
+#   - 對外開放 port 80 + 443 (Let's Encrypt 用 HTTP-01 挑戰)
+#   - DNS A record:lims.ddns.net → 該機器的公網 IP
+#   - 環境變數 ADMIN_EMAIL 設好(用來通知憑證即將到期)
+
+{
+	# 通知信箱(Let's Encrypt 用,憑證快到期時會寄)
+	# 預設值若沒帶 ADMIN_EMAIL 就用 admin@lims.ddns.net
+	email {$ADMIN_EMAIL:admin@lims.ddns.net}
+
+	# 把 access log 寫到 stdout,讓 docker logs / Cloud Logging 接得到
+	log {
+		output stdout
+		format console
+	}
+}
+
+lims.ddns.net {
+	encode gzip zstd
+
+	# Django REST API
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			# 把 X-Forwarded-Proto=https 傳給 Django,
+			# 配合 settings.py 的 SECURE_PROXY_SSL_HEADER 設定。
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Django admin (Django 內建管理介面,不是 LIMS 的管理後台)
+	handle /django-admin/* {
+		reverse_proxy backend:8000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Django collected static (Django admin 的靜態檔)
+	handle /static/* {
+		reverse_proxy backend:8000 {
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Vue SPA + history fallback
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+
+		# Cache 規則:hashed assets 永久,index.html 不快取
+		@hashedAsset path_regexp asset \.[a-zA-Z0-9]{8,}\.(js|css|woff2?|svg|png|jpg|jpeg|gif|ico)$
+		header @hashedAsset Cache-Control "public, max-age=31536000, immutable"
+		header /index.html Cache-Control "no-cache"
+	}
+
+	# 安全 headers
+	header {
+		# HSTS:強制瀏覽器永遠走 HTTPS
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		# 防點擊劫持
+		X-Frame-Options "DENY"
+		# 防 MIME sniffing
+		X-Content-Type-Options "nosniff"
+		# Referrer policy
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# 移除 Caddy 預設的 Server header 揭露
+		-Server
+	}
+}
