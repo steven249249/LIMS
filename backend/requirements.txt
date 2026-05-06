@@ -3,6 +3,9 @@ djangorestframework>=3.17,<3.18
 djangorestframework-simplejwt>=5.5,<6
 django-cors-headers>=4.9,<5
 PyMySQL>=1.1,<2
+# Required by PyMySQL when MySQL 8 uses its default caching_sha2_password
+# auth plugin — the SHA256 / RSA handshake fails without it.
+cryptography>=42,<46
 redis>=7.4,<8
 celery>=5.6,<6
 gunicorn>=23,<24
