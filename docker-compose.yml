@@ -78,6 +78,10 @@ services:
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY in .env}
       DJANGO_PRODUCTION: "True"
+      # settings.py refuses to import without DJANGO_ALLOWED_HOSTS in
+      # production mode — the worker doesn't actually serve HTTP, but it
+      # imports the same settings module as the API. Mirror what backend has.
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-lims.ddns.net}"
       DB_ENGINE: mysql
       DB_NAME: ${DB_NAME:-lab_booking}
       DB_USER: ${DB_USER:-lab_user}

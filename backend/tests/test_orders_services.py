@@ -27,90 +27,55 @@ from tests.factories import (
 
 @pytest.mark.unit
 class TestCreateOrder:
-    def test_user_without_department_is_rejected(self, db, employee, equipment_type):
-        # Arrange — user with no department; even with a valid experiment +
-        # target lab, creation should still be blocked because the requester
-        # has no home dept to attribute the order to.
+    def test_user_without_department_is_rejected(self, db, department):
+        # Arrange — requester with no home dept; experiment has a lab, but
+        # we still need the requester themselves to be in a dept.
         user = UserFactory(department=None)
-        experiment = ExperimentFactory.with_requirement(equipment_type=equipment_type)
+        experiment = ExperimentFactory(department=department)
         # Act / Assert
         with pytest.raises(ValidationError, match='department'):
-            services.create_order(
-                user=user, target_department=employee.department, experiment=experiment,
-            )
+            services.create_order(user=user, experiment=experiment)
 
-    def test_rejected_when_experiment_has_no_requirements(self, db, employee):
-        # Arrange — experiment exists but no required_equipments rows
-        experiment = ExperimentFactory()
-        # Act / Assert
-        with pytest.raises(ValidationError, match='no equipment requirements'):
-            services.create_order(
-                user=employee,
-                target_department=employee.department,
-                experiment=experiment,
-            )
+    def test_rejected_when_experiment_has_no_lab(self, db, employee):
+        experiment = ExperimentFactory()  # no department set
+        with pytest.raises(ValidationError, match='not assigned to a lab'):
+            services.create_order(user=employee, experiment=experiment)
 
-    def test_creates_one_stage_per_requirement_in_target_lab(self, db, employee, equipment_type):
-        # Arrange — experiment with 2 sequential requirements (different types)
-        from tests.factories import (
-            ExperimentRequiredEquipmentFactory, EquipmentTypeFactory, DepartmentFactory,
-        )
+    def test_creates_single_stage_at_experiment_lab(self, db, employee):
+        # Arrange — experiment is pinned to its own lab; the requester's
+        # home dept is irrelevant for routing.
+        from tests.factories import DepartmentFactory
         target = DepartmentFactory(name='Reliability Lab')
-        type_b = EquipmentTypeFactory(name='Furnace')
-        experiment = ExperimentFactory(name='RelTest')
-        ExperimentRequiredEquipmentFactory(
-            experiment=experiment, equipment_type=equipment_type,
-            quantity=1, step_order=1,
-        )
-        ExperimentRequiredEquipmentFactory(
-            experiment=experiment, equipment_type=type_b, quantity=2, step_order=2,
-        )
+        experiment = ExperimentFactory(name='RelTest', department=target)
         # Act
         order = services.create_order(
-            user=employee,
-            target_department=target,
-            experiment=experiment,
-            lot_id='L-001',
+            user=employee, experiment=experiment, lot_id='L-001',
         )
         # Assert
         assert order.status == Order.Status.WAITING
         assert order.lot_id == 'L-001'
-        stages = list(order.stages.order_by('step_order'))
-        assert len(stages) == 2
+        stages = list(order.stages.all())
+        assert len(stages) == 1
         assert stages[0].department_id == target.id
-        assert stages[0].equipment_type_id == equipment_type.id
-        assert stages[0].status == OrderStage.Status.WAITING   # first stage open
-        assert stages[1].equipment_type_id == type_b.id
-        assert stages[1].status == OrderStage.Status.PENDING   # waits for relay
+        assert stages[0].equipment_type_id is None              # no machine pinned
+        assert stages[0].status == OrderStage.Status.WAITING
 
-    def test_target_lab_manager_is_notified(self, db, employee, equipment_type, mocker):
-        # Arrange — Spy on _send_notification; manager is in the destination lab
+    def test_target_lab_manager_is_notified(self, db, employee, mocker):
+        # Arrange — Spy on _send_notification; manager belongs to the lab
+        # that owns the experiment, NOT the requester's home dept.
         from tests.factories import DepartmentFactory
         target = DepartmentFactory(name='Reliability Lab')
         UserFactory(department=target, role='lab_manager')
-        experiment = ExperimentFactory.with_requirement(equipment_type=equipment_type)
+        experiment = ExperimentFactory(department=target)
         notify_spy = mocker.spy(services, '_send_notification')
         # Act
-        services.create_order(
-            user=employee, target_department=target, experiment=experiment,
-        )
+        services.create_order(user=employee, experiment=experiment)
         # Assert — one notification, addressed to the target-lab manager
         assert notify_spy.call_count == 1
 
-    def test_target_department_is_required(self, db, employee, equipment_type):
-        experiment = ExperimentFactory.with_requirement(equipment_type=equipment_type)
-        with pytest.raises(ValidationError, match='target_department'):
-            services.create_order(
-                user=employee, target_department=None, experiment=experiment,
-            )
-
     def test_experiment_is_required(self, db, employee):
         with pytest.raises(ValidationError, match='experiment'):
-            services.create_order(
-                user=employee,
-                target_department=employee.department,
-                experiment=None,
-            )
+            services.create_order(user=employee, experiment=None)
 
 
 @pytest.mark.unit
@@ -208,14 +173,12 @@ class TestApproveAndScheduleStage:
         new orders to WAITING; the first stage approval is what promotes
         them to IN_PROGRESS. This test pins both halves."""
         mocker.patch(
-            'scheduling.services.allocate_equipments_for_stage', return_value=[],
+            'scheduling.services.allocate_equipments_for_stage', return_value=None,
         )
         # Arrange — build a real order via the public API so the WAITING
         # invariant on creation is also covered.
-        experiment = ExperimentFactory.with_requirement(equipment_type=equipment_type)
-        order = services.create_order(
-            user=employee, target_department=employee.department, experiment=experiment,
-        )
+        experiment = ExperimentFactory(department=employee.department)
+        order = services.create_order(user=employee, experiment=experiment)
         assert order.status == Order.Status.WAITING        # invariant on creation
         first_stage = order.stages.order_by('step_order').first()
         assert first_stage.status == OrderStage.Status.WAITING
@@ -337,29 +300,3 @@ class TestCompleteStage:
         assert notified_user == order.user
         assert 'ready' in msg.lower()
 
-    @freeze_time('2026-05-02 11:00:00')
-    def test_completion_relays_to_next_pending_stage_in_same_lab(
-        self, db, order, equipment_type, department,
-    ):
-        """Multi-step experiment within one lab: completing step 1 should
-        promote step 2 from PENDING → WAITING and leave the order
-        IN_PROGRESS until the last stage is done."""
-        from tests.factories import EquipmentTypeFactory
-        order.status = Order.Status.IN_PROGRESS
-        order.save()
-        type_b = EquipmentTypeFactory(name='Furnace-relay')
-        stage1 = OrderStageFactory(
-            order=order, department=department, equipment_type=equipment_type,
-            step_order=1, status=OrderStage.Status.IN_PROGRESS,
-        )
-        stage2 = OrderStageFactory(
-            order=order, department=department, equipment_type=type_b,
-            step_order=2, status=OrderStage.Status.PENDING,
-        )
-        # Act
-        services.complete_stage(stage1)
-        # Assert — order still IN_PROGRESS, next stage flipped to WAITING
-        order.refresh_from_db()
-        stage2.refresh_from_db()
-        assert order.status == Order.Status.IN_PROGRESS
-        assert stage2.status == OrderStage.Status.WAITING

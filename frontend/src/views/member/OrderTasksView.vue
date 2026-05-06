@@ -36,7 +36,9 @@
 
         <template v-else-if="column.dataIndex === 'stage'">
           <div class="stage-cell">
-            <span class="font-bold">{{ record.equipment_type_name }}</span>
+            <span class="font-bold">
+              {{ record.equipment_type_name || record.experiment_name || record.department_name }}
+            </span>
             <a-tag style="margin-left: 6px">{{ t('review.step') }} {{ record.step_order }}</a-tag>
           </div>
         </template>
@@ -76,7 +78,7 @@
             </a-tooltip>
             <a-popconfirm
               v-else
-              :title="t('tasks.confirmMarkDone', { step: record.step_order, type: record.equipment_type_name })"
+              :title="t('tasks.confirmMarkDone', { step: record.step_order, type: record.equipment_type_name || record.experiment_name || record.department_name })"
               :ok-text="t('common.confirm')"
               :cancel-text="t('common.cancel')"
               @confirm="handleComplete(record)"

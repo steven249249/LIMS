@@ -89,10 +89,15 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ExperimentSerializer(serializers.ModelSerializer):
     requirement_count = serializers.IntegerField(source='required_equipments.count', read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True)
 
     class Meta:
         model = Experiment
-        fields = ('id', 'name', 'remark', 'requirement_count')
+        fields = (
+            'id', 'name', 'remark',
+            'department', 'department_name',
+            'requirement_count',
+        )
 
 
 class EquipmentTypeSerializer(serializers.ModelSerializer):

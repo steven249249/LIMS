@@ -30,7 +30,7 @@
             <a-tooltip
               v-for="s in record.stages || []"
               :key="s.id"
-              :title="`${s.department_name} · ${s.equipment_type_name} · ${s.status}`"
+              :title="`${s.department_name} · ${statusLabel(s.status)}`"
             >
               <span class="relay-dot" :class="`dot-${s.status}`"></span>
             </a-tooltip>
@@ -68,15 +68,14 @@
             :status="overallStepsStatus"
           >
             <a-step
-              v-for="(stage, idx) in selectedOrder.stages"
+              v-for="stage in selectedOrder.stages"
               :key="stage.id"
-              :title="`${idx + 1}. ${stage.equipment_type_name}`"
+              :title="stage.department_name"
               :status="stepStatus(stage)"
             >
               <template #description>
                 <div class="step-desc">
-                  <div>{{ stage.department_name }}</div>
-                  <a-tag :color="stageStatusColor(stage.status)" style="margin-top: 4px">
+                  <a-tag :color="stageStatusColor(stage.status)">
                     {{ statusLabel(stage.status) }}
                   </a-tag>
                 </div>
@@ -124,14 +123,8 @@
           <a-descriptions-item :label="t('orders.laboratory')">
             {{ currentStage.department_name }}
           </a-descriptions-item>
-          <a-descriptions-item :label="t('orders.equipmentType')">
-            {{ currentStage.equipment_type_name }}
-          </a-descriptions-item>
           <a-descriptions-item :label="t('orders.operator')">
             {{ currentStage.assignee_name || t('common.notAssigned') }}
-          </a-descriptions-item>
-          <a-descriptions-item :label="t('orders.equipmentCode')">
-            {{ currentStage.equipment_code || 'TBD' }}
           </a-descriptions-item>
           <a-descriptions-item v-if="currentStage.schedule_start" :label="t('orders.schedule')">
             {{ formatDate(currentStage.schedule_start) }}

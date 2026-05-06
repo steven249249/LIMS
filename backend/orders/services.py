@@ -66,43 +66,28 @@ def _assert_transition(order: Order, target: str):
 def create_order(
     *,
     user,
-    target_department,
     experiment,
     is_urgent=False,
     lot_id='',
     remark='',
 ) -> Order:
-    """Phase 1 — Requester sends the wafer to a specific lab.
+    """Phase 1 — Requester picks an experiment; the order goes to that
+    experiment's lab automatically.
 
-    The form is just "where to send it + what experiment to run" — the
-    requester does NOT pick equipment. The Experiment row encodes the
-    experiment's requirements (which equipment types, in what step order,
-    how many units of each) and the lab manager later picks the actual
-    units, dates and operators per stage.
-
-    Each Order is one lab visit. When the wafer comes back, the requester
-    submits another order to the next lab. No cross-lab auto-relay.
-
-    State transitions on creation:
-        Order  → WAITING            (whole order is waiting for the manager)
-        Stage  → WAITING (first), PENDING (rest in step_order sequence)
+    Each Experiment is pinned to one Department, so the requester does not
+    pick a lab and never sees a machine. The order has exactly one stage
+    at the experiment's lab. The lab manager later picks date / assignee /
+    (optionally) machine.
     """
     if not user.department:
         raise ValidationError("User must belong to a department to create orders.")
-    if target_department is None:
-        raise ValidationError("target_department is required.")
     if experiment is None:
-        raise ValidationError("experiment is required so the lab manager has a recipe.")
-
-    requirements = list(
-        experiment.required_equipments
-        .select_related('equipment_type')
-        .order_by('step_order', 'id')
-    )
-    if not requirements:
+        raise ValidationError("experiment is required.")
+    target_department = experiment.department
+    if target_department is None:
         raise ValidationError(
-            f"Experiment '{experiment.name}' has no equipment requirements yet — "
-            "ask the admin to define them before submitting."
+            f"Experiment '{experiment.name}' is not assigned to a lab yet — "
+            "ask the admin to set its department before submitting."
         )
 
     order = Order.objects.create(
@@ -115,29 +100,19 @@ def create_order(
         status=Order.Status.WAITING,
     )
 
-    # One OrderStage per (equipment_type, step_order) requirement. The first
-    # stage opens in WAITING so the lab manager can schedule it immediately;
-    # the remaining stages start PENDING and unlock when their predecessor
-    # is completed (intra-lab relay).
-    for idx, req in enumerate(requirements):
-        OrderStage.objects.create(
-            order=order,
-            step_order=req.step_order or (idx + 1),
-            department=target_department,
-            equipment_type=req.equipment_type,
-            status=(
-                OrderStage.Status.WAITING if idx == 0
-                else OrderStage.Status.PENDING
-            ),
-        )
+    OrderStage.objects.create(
+        order=order,
+        step_order=1,
+        department=target_department,
+        equipment_type=None,
+        status=OrderStage.Status.WAITING,
+    )
 
-    # Notify the target lab's manager so they pick it up promptly.
     target_manager = target_department.members.filter(role='lab_manager').first()
     _send_notification(
         target_manager,
         f"New sample order for your lab: {order.order_no} "
-        f"(experiment: {experiment.name}, "
-        f"{len(requirements)} step{'s' if len(requirements) != 1 else ''})",
+        f"(experiment: {experiment.name})",
     )
 
     return order
@@ -211,13 +186,11 @@ def approve_and_schedule_stage(
 
 
 def complete_stage(stage: OrderStage) -> OrderStage:
-    """Member finishes a stage. Relays inside the same lab.
+    """Member finishes the lab visit. The wafer is ready for pickup.
 
-    Each Order = one lab visit, so the relay never crosses departments.
-    Within the visit there is one stage per required equipment_type; when
-    one stage ends we unlock the next PENDING one. Only when all stages in
-    the order are DONE do we mark the order DONE and notify the requester
-    to collect their wafer.
+    Each order is one stage at one lab, so completing the stage closes the
+    order and notifies the requester so they can collect the wafer (and
+    submit a fresh order to the next lab if their flow needs more steps).
     """
     if stage.status != OrderStage.Status.IN_PROGRESS:
         raise ValidationError("Only in-progress stages can be completed.")
@@ -231,7 +204,6 @@ def complete_stage(stage: OrderStage) -> OrderStage:
     stage.schedule_end = now  # release early in stage data
     stage.save()
 
-    # Release equipment booking early
     from scheduling.models import EquipmentBooking
     booking = EquipmentBooking.objects.filter(stage=stage).first()
     if booking:
@@ -242,27 +214,6 @@ def complete_stage(stage: OrderStage) -> OrderStage:
         stage.equipment.status = Equipment.Status.AVAILABLE
         stage.equipment.save()
 
-    # Intra-lab relay: open the next PENDING stage within the same order so
-    # the manager can schedule it.
-    next_stage = (
-        OrderStage.objects
-        .filter(order=stage.order, status=OrderStage.Status.PENDING)
-        .order_by('step_order', 'id')
-        .first()
-    )
-    if next_stage:
-        next_stage.status = OrderStage.Status.WAITING
-        next_stage.save(update_fields=['status'])
-        mgr = next_stage.department.members.filter(role='lab_manager').first()
-        if mgr:
-            _send_notification(
-                mgr,
-                f"Order {stage.order.order_no} step {next_stage.step_order} "
-                f"({next_stage.equipment_type.name}) is ready to schedule.",
-            )
-        return stage
-
-    # All stages in this lab visit are done → close the order.
     order = stage.order
     order.status = Order.Status.DONE
     order.ended_at = now

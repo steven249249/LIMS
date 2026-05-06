@@ -35,14 +35,7 @@
         :loading="loading"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.dataIndex === 'step_order'">
-            <a-tag color="blue">{{ t('review.step') }} {{ record.step_order }}</a-tag>
-          </template>
-          <template v-else-if="column.dataIndex === 'required_quantity'">
-            <a-tag v-if="record.required_quantity">×{{ record.required_quantity }}</a-tag>
-            <span v-else class="muted">—</span>
-          </template>
-          <template v-else-if="column.dataIndex === 'is_urgent'">
+          <template v-if="column.dataIndex === 'is_urgent'">
             <a-tag v-if="record.is_urgent" color="red">{{ t('orders.urgent') }}</a-tag>
             <span v-else class="muted">—</span>
           </template>
@@ -80,10 +73,7 @@
         :pagination="false"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.dataIndex === 'step_order'">
-            <a-tag color="blue">{{ t('review.step') }} {{ record.step_order }}</a-tag>
-          </template>
-          <template v-else-if="column.dataIndex === 'equipment_code'">
+          <template v-if="column.dataIndex === 'equipment_code'">
             <a-tag v-if="record.equipment_code" color="purple">
               {{ record.equipment_code }}
             </a-tag>
@@ -141,12 +131,9 @@
       <a-form layout="vertical">
         <a-form-item :label="t('review.noteOrderStep')">
           <a-input
-            :value="`${approveTarget?.order_no} · ${t('review.step')} ${approveTarget?.step_order} · ${approveTarget?.equipment_type_name || ''}`"
+            :value="`${approveTarget?.order_no} · ${approveTarget?.experiment_name || ''}`"
             readonly
           />
-        </a-form-item>
-        <a-form-item v-if="approveTarget?.experiment_name" :label="t('review.experiment')">
-          <a-input :value="approveTarget.experiment_name" readonly />
         </a-form-item>
         <a-row :gutter="12">
           <a-col :span="12">
@@ -339,10 +326,7 @@ const memberOptions = computed(() =>
 
 const waitingColumns = computed(() => [
   { title: t('orders.orderNo'), dataIndex: 'order_no', width: 200 },
-  { title: t('review.experiment'), dataIndex: 'experiment_name', width: 160 },
-  { title: t('review.step'), dataIndex: 'step_order', width: 90 },
-  { title: t('orders.equipmentType'), dataIndex: 'equipment_type_name' },
-  { title: t('review.requiredQty'), dataIndex: 'required_quantity', width: 80 },
+  { title: t('review.experiment'), dataIndex: 'experiment_name' },
   { title: t('review.requester'), dataIndex: 'user_name', width: 140 },
   { title: t('orders.lotId'), dataIndex: 'lot_id', width: 120 },
   { title: t('orders.urgent'), dataIndex: 'is_urgent', width: 80 },
@@ -351,9 +335,7 @@ const waitingColumns = computed(() => [
 
 const activeColumns = computed(() => [
   { title: t('orders.orderNo'), dataIndex: 'order_no', width: 200 },
-  { title: t('review.experiment'), dataIndex: 'experiment_name', width: 160 },
-  { title: t('review.step'), dataIndex: 'step_order', width: 90 },
-  { title: t('orders.equipmentType'), dataIndex: 'equipment_type_name', width: 160 },
+  { title: t('review.experiment'), dataIndex: 'experiment_name' },
   { title: t('review.machine'), dataIndex: 'equipment_code', width: 140 },
   { title: t('review.assignee'), dataIndex: 'assignee_name', width: 160 },
   { title: t('orders.schedule'), dataIndex: 'schedule', width: 240 },
@@ -373,16 +355,17 @@ const scheduleWarning = ref('')
 const labMachines = ref([])
 const loadingMachines = ref(false)
 
-const machineOptionsForTarget = computed(() => {
-  if (!approveTarget.value?.equipment_type_id) return []
-  return labMachines.value
-    .filter((eq) => eq.equipment_type === approveTarget.value.equipment_type_id)
-    .map((eq) => ({
-      value: eq.id,
-      label: `${eq.code} · ${eq.status}`,
-      disabled: eq.status !== 'available',
-    }))
-})
+const machineOptionsForTarget = computed(() =>
+  // Experiments don't pre-define equipment types anymore, so the picker
+  // shows every unit in the manager's lab. Disabled options keep occupied
+  // / maintenance machines visible (so the manager knows they exist) but
+  // unselectable.
+  labMachines.value.map((eq) => ({
+    value: eq.id,
+    label: `${eq.code} · ${eq.type_name || ''} · ${eq.status}`,
+    disabled: eq.status !== 'available',
+  })),
+)
 
 // Reject modal state
 const rejectOpen = ref(false)

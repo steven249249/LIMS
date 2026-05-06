@@ -3,10 +3,23 @@ from django.db import models
 
 
 class Experiment(models.Model):
-    """A type of experiment that can be performed."""
+    """A type of experiment that can be performed.
+
+    One experiment is performed at exactly one lab (Department). The
+    requester picks the experiment and the order is automatically routed to
+    that lab — they never pick a lab or a machine themselves.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200, unique=True)
     remark = models.TextField(blank=True, default='')
+    department = models.ForeignKey(
+        'users.Department',
+        on_delete=models.PROTECT,
+        related_name='experiments',
+        null=True,
+        blank=True,
+        help_text='The lab that performs this experiment.',
+    )
 
     class Meta:
         db_table = 'experiment'

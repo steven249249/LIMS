@@ -38,8 +38,8 @@ class ExperimentRequiredEquipmentSerializer(serializers.ModelSerializer):
 
 
 class ExperimentSerializer(serializers.ModelSerializer):
-    required_equipments = ExperimentRequiredEquipmentSerializer(many=True, read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True)
 
     class Meta:
         model = Experiment
-        fields = ['id', 'name', 'remark', 'required_equipments']
+        fields = ['id', 'name', 'remark', 'department', 'department_name']

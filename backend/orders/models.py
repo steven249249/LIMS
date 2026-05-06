@@ -115,7 +115,16 @@ class OrderStage(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='stages')
     step_order = models.PositiveIntegerField()
     department = models.ForeignKey('users.Department', on_delete=models.CASCADE)
-    equipment_type = models.ForeignKey('equipments.EquipmentType', on_delete=models.CASCADE)
+    # equipment_type used to be required (one stage per equipment recipe).
+    # Now experiments map to a single lab visit and don't pre-define machines,
+    # so this is optional metadata — set if the manager wants the wafer on a
+    # specific machine type, NULL otherwise.
+    equipment_type = models.ForeignKey(
+        'equipments.EquipmentType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     
     # Execution data (set by manager/member)
     assignee = models.ForeignKey(

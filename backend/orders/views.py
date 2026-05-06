@@ -8,7 +8,6 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
 from equipments.models import Experiment
-from users.models import Department
 from .models import Order, OrderStage
 from .serializers import (
     OrderListSerializer,
@@ -85,16 +84,12 @@ class OrderCreateView(APIView):
         ser = OrderCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
 
-        target_department = get_object_or_404(
-            Department, id=ser.validated_data['target_department']
-        )
         experiment = get_object_or_404(
             Experiment, id=ser.validated_data['experiment']
         )
 
         order = services.create_order(
             user=request.user,
-            target_department=target_department,
             experiment=experiment,
             is_urgent=ser.validated_data.get('is_urgent', False),
             lot_id=ser.validated_data.get('lot_id', ''),

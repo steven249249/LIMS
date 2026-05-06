@@ -170,7 +170,11 @@ def create_demo_catalog(apps, schema_editor):
             status=status,
         )
 
-    # 4) Experiments + per-step equipment requirements
+    # 4) Experiments + per-step equipment requirements. ``department`` is
+    #    not set here because the field doesn't exist yet at this point in
+    #    migration history — the later 0005_backfill_experiment_department
+    #    migration walks each experiment's first required-equipment row
+    #    and points it at that lab.
     for exp_name, remark, steps in EXPERIMENTS:
         exp, _ = Experiment.objects.get_or_create(
             name=exp_name,
@@ -178,7 +182,6 @@ def create_demo_catalog(apps, schema_editor):
         )
         for step_order, type_name, quantity in steps:
             equipment_type = types_by_name[type_name]
-            # Compound key: (experiment, equipment_type) is unique_together
             if ExperimentRequiredEquipment.objects.filter(
                 experiment=exp, equipment_type=equipment_type,
             ).exists():
