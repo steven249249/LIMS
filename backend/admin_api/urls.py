@@ -7,6 +7,7 @@ app_name = 'admin_api'
 router = DefaultRouter()
 router.register(r'fabs', views.FABViewSet, basename='admin-fab')
 router.register(r'departments', views.DepartmentViewSet, basename='admin-department')
+router.register(r'wafer-lots', views.WaferLotViewSet, basename='admin-wafer-lot')
 router.register(r'users', views.UserViewSet, basename='admin-user')
 router.register(r'experiments', views.ExperimentViewSet, basename='admin-experiment')
 router.register(r'equipment-types', views.EquipmentTypeViewSet, basename='admin-equipment-type')

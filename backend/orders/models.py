@@ -37,8 +37,18 @@ class Order(models.Model):
         blank=True,
         related_name='orders',
     )
-    lot_id = models.CharField(max_length=50, blank=True, default='',
-                              help_text='Wafer lot ID for tracking')
+    # FK to the registered WaferLot. Column name stays "lot_id" (Django's
+    # default for the FK) so reads like ``order.lot_id`` continue to return
+    # the lot code string used everywhere downstream — and traceability is
+    # now enforced at the database level rather than as free text.
+    lot = models.ForeignKey(
+        'users.WaferLot',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='orders',
+        help_text='Registered wafer lot. Pick from the dropdown — picked code is stored as the FK.',
+    )
     assignee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

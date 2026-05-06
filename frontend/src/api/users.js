@@ -16,3 +16,5 @@ export const fetchProfile = () => client.get('/users/profile/')
 export const fetchFabs = () => client.get('/users/fabs/')
 export const fetchDepartments = (fabId) =>
   client.get('/users/departments/', { params: { fab_id: fabId } })
+export const fetchWaferLots = (params) =>
+  client.get('/users/wafer-lots/', { params })

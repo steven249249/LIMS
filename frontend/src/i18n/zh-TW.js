@@ -114,10 +114,13 @@ export default {
     experimentInfo: '實驗資訊',
     pickExperimentHint: '選擇實驗類型後,系統會顯示該實驗對應的實驗室與說明',
     lotIdLabel: 'Lot ID',
-    lotIdPlaceholder: '例如: LOT-2026-A001',
+    lotIdPlaceholder: '請選擇一個已登錄的 Lot',
+    requireLotId: '請選擇 Lot ID',
+    noLotsAvailable: '此廠區尚未登錄任何 Lot,請通知系統管理員建立',
+    loadLotsFailed: '載入 Lot 清單失敗',
     urgentCheckbox: '標記為緊急訂單(優先排程)',
-    requirementsPlaceholder: '請描述這次實驗的需求 (例如要量測哪些參數、需要的條件、預期結果...)',
-    requireRequirements: '請填寫實驗需求,讓主管知道要怎麼安排',
+    requirementsPlaceholder: '簡短描述要做什麼即可 (例如:加熱、量測線寬...)',
+    requireRequirements: '請大概描述一下需求,讓主管知道要怎麼安排',
     remarkPlaceholder: '其他補充事項...',
     singleLabNote: '一張訂單只送一間實驗室。晶圓回來後,如需下一站請再送出新的申請。',
     submitButton: '送出申請',
@@ -247,6 +250,7 @@ export default {
       logs: '活動日誌',
       fabs: 'FAB 工廠',
       departments: '部門',
+      waferLots: 'Wafer Lots',
       users: '使用者',
       experiments: '實驗類型',
       equipmentTypes: '設備類型',
@@ -317,6 +321,8 @@ export default {
       fabs: { title: 'FAB 工廠', subtitle: '管理 FAB 廠區基本資料', search: '依 FAB 名稱搜尋', label: 'FAB' },
       // Department
       departments: { title: '部門', subtitle: '管理 FAB 之下的部門結構', search: '依部門名稱或 FAB 名稱搜尋', label: '部門' },
+      // Wafer Lot
+      waferLots: { title: 'Wafer Lots', subtitle: '管理可送樣的 Lot ID 主清單(申請人從這裡選)', search: '依 Lot ID / 備註 / FAB 搜尋', label: 'Wafer Lot', code: 'Lot ID', notes: '備註' },
       // User
       users: { title: '使用者', subtitle: '管理帳號、角色與密碼。新增時必填密碼;編輯時留空則不變更。可批次建立 N 組請求發送者 / 實驗室成員 / 實驗室管理員', search: '依 username / email / 姓名搜尋', label: '使用者' },
       // Experiment

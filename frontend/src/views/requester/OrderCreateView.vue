@@ -43,11 +43,20 @@
               />
             </a-form-item>
 
-            <a-form-item :label="t('createOrder.lotIdLabel')" name="lot_id">
-              <a-input
+            <a-form-item
+              :label="t('createOrder.lotIdLabel')"
+              name="lot_id"
+              :rules="[{ required: true, message: t('createOrder.requireLotId') }]"
+            >
+              <a-select
                 v-model:value="form.lot_id"
                 :placeholder="t('createOrder.lotIdPlaceholder')"
                 size="large"
+                show-search
+                option-filter-prop="label"
+                :options="lotOptions"
+                :loading="loadingLots"
+                :not-found-content="lots.length ? undefined : t('createOrder.noLotsAvailable')"
               />
             </a-form-item>
 
@@ -135,12 +144,15 @@ import { useI18n } from 'vue-i18n'
 import { message } from 'ant-design-vue'
 import { SendOutlined } from '@ant-design/icons-vue'
 import { fetchExperiments } from '../../api/equipments'
+import { fetchWaferLots } from '../../api/users'
 import { createOrder } from '../../api/orders'
 
 const { t } = useI18n()
 
 const experiments = ref([])
+const lots = ref([])
 const loadingExperiments = ref(false)
+const loadingLots = ref(false)
 const loading = ref(false)
 const error = ref('')
 const success = ref(false)
@@ -149,10 +161,17 @@ const createdOrderNo = ref(null)
 const form = reactive({
   experiment: undefined,
   is_urgent: false,
-  lot_id: '',
+  lot_id: undefined,
   requirements: '',
   remark: '',
 })
+
+const lotOptions = computed(() =>
+  lots.value.map((l) => ({
+    value: l.code,
+    label: l.notes ? `${l.code} — ${l.notes}` : l.code,
+  })),
+)
 
 const experimentOptions = computed(() =>
   experiments.value.map((exp) => ({
@@ -167,14 +186,23 @@ const selectedExp = computed(() =>
 
 onMounted(async () => {
   loadingExperiments.value = true
-  try {
-    const { data } = await fetchExperiments()
-    experiments.value = data.results || data || []
-  } catch {
+  loadingLots.value = true
+  const [expRes, lotsRes] = await Promise.allSettled([
+    fetchExperiments(),
+    fetchWaferLots(),
+  ])
+  if (expRes.status === 'fulfilled') {
+    experiments.value = expRes.value.data.results || expRes.value.data || []
+  } else {
     message.error(t('createOrder.loadExpFailed'))
-  } finally {
-    loadingExperiments.value = false
   }
+  if (lotsRes.status === 'fulfilled') {
+    lots.value = lotsRes.value.data.results || lotsRes.value.data || []
+  } else {
+    message.error(t('createOrder.loadLotsFailed'))
+  }
+  loadingExperiments.value = false
+  loadingLots.value = false
 })
 
 async function handleSubmit() {
@@ -208,7 +236,7 @@ async function handleSubmit() {
 function resetForm() {
   form.experiment = undefined
   form.is_urgent = false
-  form.lot_id = ''
+  form.lot_id = undefined
   form.requirements = ''
   form.remark = ''
   success.value = false

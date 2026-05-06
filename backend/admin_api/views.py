@@ -20,7 +20,7 @@ from equipments.models import (
 from monitoring.permissions import IsSystemSuperuser
 from orders.models import Order, OrderStage
 from scheduling.models import EquipmentBooking
-from users.models import FAB, Department, User
+from users.models import FAB, Department, User, WaferLot
 
 from . import serializers as admin_serializers
 
@@ -53,6 +53,13 @@ class DepartmentViewSet(AdminBaseViewSet):
     serializer_class = admin_serializers.DepartmentSerializer
     search_fields = ('name', 'fab__fab_name')
     ordering_fields = ('name', 'fab__fab_name')
+
+
+class WaferLotViewSet(AdminBaseViewSet):
+    queryset = WaferLot.objects.select_related('fab').order_by('fab__fab_name', 'code')
+    serializer_class = admin_serializers.WaferLotSerializer
+    search_fields = ('code', 'notes', 'fab__fab_name')
+    ordering_fields = ('code', 'fab__fab_name', 'created_at')
 
 
 class UserViewSet(AdminBaseViewSet):

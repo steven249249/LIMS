@@ -67,8 +67,8 @@ def create_order(
     *,
     user,
     experiment,
+    lot=None,
     is_urgent=False,
-    lot_id='',
     requirements='',
     remark='',
 ) -> Order:
@@ -101,7 +101,7 @@ def create_order(
         department=target_department,
         experiment=experiment,
         is_urgent=is_urgent,
-        lot_id=lot_id,
+        lot=lot,
         requirements=requirements,
         remark=remark,
         status=Order.Status.WAITING,

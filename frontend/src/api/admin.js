@@ -21,6 +21,7 @@ const resource = (path) => ({
 
 export const adminFabs = resource('fabs')
 export const adminDepartments = resource('departments')
+export const adminWaferLots = resource('wafer-lots')
 export const adminUsers = {
   ...resource('users'),
   /** Provision N requesters / lab members / lab managers in one shot. */

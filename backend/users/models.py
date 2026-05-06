@@ -31,6 +31,28 @@ class Department(models.Model):
         return f'{self.fab.fab_name} - {self.name}'
 
 
+class WaferLot(models.Model):
+    """A registered wafer lot. The lot code is its primary key (globally
+    unique) — every Order references it via FK rather than holding a
+    free-text lot_id, so traceability is enforced at the database level.
+
+    Admins maintain the master list via the Admin Console; the submission
+    UI populates the dropdown from this table so requesters can never
+    mistype a code.
+    """
+    code = models.CharField(max_length=50, primary_key=True)
+    fab = models.ForeignKey(FAB, on_delete=models.CASCADE, related_name='wafer_lots')
+    notes = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'wafer_lot'
+        ordering = ['code']
+
+    def __str__(self):
+        return self.code
+
+
 class User(AbstractUser):
     """Custom user model with UUID, department FK, role, and status."""
 

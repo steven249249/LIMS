@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
 from equipments.models import Experiment
+from users.models import WaferLot
 from .models import Order, OrderStage
 from .serializers import (
     OrderListSerializer,
@@ -88,11 +89,35 @@ class OrderCreateView(APIView):
             Experiment, id=ser.validated_data['experiment']
         )
 
+        # Lot ID is the WaferLot's primary key (its code). Reject anything
+        # that isn't a registered lot in the requester's fab — the dropdown
+        # already constrains the UI, this is the API-level safety net.
+        lot_code = ser.validated_data['lot_id']
+        try:
+            lot = WaferLot.objects.get(pk=lot_code)
+        except WaferLot.DoesNotExist:
+            return Response(
+                {'lot_id': [f'Wafer lot "{lot_code}" is not registered.']},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+        user_fab_id = (
+            request.user.department.fab_id if request.user.department else None
+        )
+        if (
+            request.user.role != 'superuser'
+            and user_fab_id is not None
+            and lot.fab_id != user_fab_id
+        ):
+            return Response(
+                {'lot_id': ['Wafer lot belongs to a different fab.']},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
         order = services.create_order(
             user=request.user,
             experiment=experiment,
+            lot=lot,
             is_urgent=ser.validated_data.get('is_urgent', False),
-            lot_id=ser.validated_data.get('lot_id', ''),
             requirements=ser.validated_data.get('requirements', ''),
             remark=ser.validated_data.get('remark', ''),
         )

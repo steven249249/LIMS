@@ -4,7 +4,7 @@ Serializers for authentication and user management.
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import FAB, Department
+from .models import FAB, Department, WaferLot
 
 User = get_user_model()
 
@@ -21,6 +21,15 @@ class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
         fields = ['id', 'fab', 'fab_name', 'name']
+
+
+class WaferLotSerializer(serializers.ModelSerializer):
+    fab_name = serializers.CharField(source='fab.fab_name', read_only=True)
+
+    class Meta:
+        model = WaferLot
+        fields = ['id', 'fab', 'fab_name', 'code', 'notes', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class UserSerializer(serializers.ModelSerializer):

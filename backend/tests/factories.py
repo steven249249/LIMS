@@ -16,7 +16,7 @@ from equipments.models import (
 )
 from orders.models import Order, OrderStage
 from scheduling.models import EquipmentBooking
-from users.models import FAB, Department
+from users.models import FAB, Department, WaferLot
 
 User = get_user_model()
 
@@ -138,6 +138,16 @@ class ExperimentRequiredEquipmentFactory(DjangoModelFactory):
 
 # ── Orders ─────────────────────────────────────────────────────────────────
 
+class WaferLotFactory(DjangoModelFactory):
+    class Meta:
+        model = WaferLot
+        django_get_or_create = ('code',)
+
+    code = factory.Sequence(lambda n: f'LOT-{n:05d}')
+    fab = factory.SubFactory(FABFactory)
+    notes = ''
+
+
 class OrderFactory(DjangoModelFactory):
     class Meta:
         model = Order
@@ -145,7 +155,7 @@ class OrderFactory(DjangoModelFactory):
     user = factory.SubFactory(UserFactory)
     department = factory.SubFactory(DepartmentFactory)
     experiment = factory.SubFactory(ExperimentFactory)
-    lot_id = factory.Sequence(lambda n: f'LOT-{n:05d}')
+    lot = factory.SubFactory(WaferLotFactory)
     is_urgent = False
     status = Order.Status.WAITING
 

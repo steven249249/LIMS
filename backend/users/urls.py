@@ -12,5 +12,6 @@ urlpatterns = [
     # Lookup
     path('fabs/', views.FABListView.as_view(), name='fab-list'),
     path('departments/', views.DepartmentListView.as_view(), name='department-list'),
+    path('wafer-lots/', views.WaferLotListView.as_view(), name='wafer-lot-list'),
     path('', views.UserListView.as_view(), name='user-list'),
 ]

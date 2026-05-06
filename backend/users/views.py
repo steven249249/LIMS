@@ -8,12 +8,13 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from .models import FAB, Department
+from .models import FAB, Department, WaferLot
 from .serializers import (
     FABSerializer,
     DepartmentSerializer,
     UserProfileSerializer,
     UserSerializer,
+    WaferLotSerializer,
 )
 
 User = get_user_model()
@@ -44,6 +45,31 @@ class DepartmentListView(generics.ListAPIView):
         if fab_id:
             qs = qs.filter(fab_id=fab_id)
         return qs
+
+
+class WaferLotListView(generics.ListAPIView):
+    """GET /api/users/wafer-lots/
+
+    Scoped to the requester's own fab — they pick from a curated dropdown
+    rather than typing a lot ID free-form. Superusers can override the scope
+    via ``?fab_id=<uuid>``.
+    """
+    serializer_class = WaferLotSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = WaferLot.objects.select_related('fab').all()
+        user = self.request.user
+        fab_id_override = self.request.query_params.get('fab_id')
+        if user.role == 'superuser':
+            if fab_id_override:
+                qs = qs.filter(fab_id=fab_id_override)
+            return qs
+        # Non-superusers: locked to their own fab.
+        if user.department and user.department.fab_id:
+            return qs.filter(fab_id=user.department.fab_id)
+        return qs.none()
 
 
 class UserListView(generics.ListAPIView):

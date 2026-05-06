@@ -44,16 +44,17 @@ class TestCreateOrder:
     def test_creates_single_stage_at_experiment_lab(self, db, employee):
         # Arrange — experiment is pinned to its own lab; the requester's
         # home dept is irrelevant for routing.
-        from tests.factories import DepartmentFactory
+        from tests.factories import DepartmentFactory, WaferLotFactory
         target = DepartmentFactory(name='Reliability Lab')
         experiment = ExperimentFactory(name='RelTest', department=target)
+        lot = WaferLotFactory(code='L-001')
         # Act
         order = services.create_order(
-            user=employee, experiment=experiment, lot_id='L-001',
+            user=employee, experiment=experiment, lot=lot,
         )
         # Assert
         assert order.status == Order.Status.WAITING
-        assert order.lot_id == 'L-001'
+        assert order.lot_id == 'L-001'           # FK column == WaferLot PK
         stages = list(order.stages.all())
         assert len(stages) == 1
         assert stages[0].department_id == target.id

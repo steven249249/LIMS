@@ -18,7 +18,7 @@ class OrderStageSerializer(serializers.ModelSerializer):
     # rows but is normally NULL on new stages.
     order_no = serializers.CharField(source='order.order_no', read_only=True)
     user_name = serializers.CharField(source='order.user.username', read_only=True)
-    lot_id = serializers.CharField(source='order.lot_id', read_only=True)
+    lot_id = serializers.CharField(source='order.lot_id', read_only=True, default='')
     experiment_name = serializers.CharField(source='order.experiment.name', read_only=True)
     is_urgent = serializers.BooleanField(source='order.is_urgent', read_only=True)
     requirements = serializers.CharField(source='order.requirements', read_only=True)
@@ -40,6 +40,10 @@ class OrderListSerializer(serializers.ModelSerializer):
     """Compact representation for list views."""
     user_name = serializers.CharField(source='user.username', read_only=True)
     experiment_name = serializers.CharField(source='experiment.name', read_only=True)
+    # ``Order.lot`` is now an FK to WaferLot (whose PK is the code), so
+    # ``order.lot_id`` returns the underlying code string. Expose it under
+    # the historical "lot_id" field name to keep frontend reads stable.
+    lot_id = serializers.CharField(read_only=True, default='')
     stages = OrderStageSerializer(many=True, read_only=True)
 
     class Meta:
@@ -57,6 +61,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     experiment_name = serializers.CharField(source='experiment.name', read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True)
     assignee_name = serializers.CharField(source='assignee.username', read_only=True)
+    lot_id = serializers.CharField(read_only=True, default='')
     experiment_details = serializers.SerializerMethodField()
     # The detail drawer in the requester UI renders a relay-progress
     # ant-design Steps component off this list; without it the tracker
@@ -94,10 +99,14 @@ class OrderCreateSerializer(serializers.Serializer):
     Experiments are pinned to a lab, so the requester only picks the
     experiment plus optional metadata; the order routes to the experiment's
     lab automatically and the requester never sees machines.
+
+    ``lot_id`` MUST resolve to an existing WaferLot row (it's the PK of
+    that table) — the form uses a dropdown sourced from the registered
+    lots so a typo cannot reach the API.
     """
     experiment = serializers.UUIDField()
     is_urgent = serializers.BooleanField(default=False)
-    lot_id = serializers.CharField(required=False, default='', allow_blank=True)
+    lot_id = serializers.CharField(max_length=50)
     requirements = serializers.CharField(required=False, default='', allow_blank=True)
     remark = serializers.CharField(required=False, default='', allow_blank=True)
 

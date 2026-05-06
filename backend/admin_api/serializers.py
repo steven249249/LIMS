@@ -14,7 +14,7 @@ from equipments.models import (
 )
 from orders.models import Order, OrderStage
 from scheduling.models import EquipmentBooking
-from users.models import FAB, Department, User
+from users.models import FAB, Department, User, WaferLot
 
 
 class FABSerializer(serializers.ModelSerializer):
@@ -32,6 +32,15 @@ class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
         fields = ('id', 'fab', 'fab_name', 'name', 'member_count')
+
+
+class WaferLotSerializer(serializers.ModelSerializer):
+    fab_name = serializers.CharField(source='fab.fab_name', read_only=True)
+
+    class Meta:
+        model = WaferLot
+        fields = ('id', 'fab', 'fab_name', 'code', 'notes', 'created_at')
+        read_only_fields = ('id', 'created_at')
 
 
 class UserSerializer(serializers.ModelSerializer):
