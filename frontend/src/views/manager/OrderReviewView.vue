@@ -35,7 +35,13 @@
         :loading="loading"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.dataIndex === 'is_urgent'">
+          <template v-if="column.dataIndex === 'requirements'">
+            <a-tooltip v-if="record.requirements" :title="record.requirements">
+              <span class="requirements-snippet">{{ record.requirements }}</span>
+            </a-tooltip>
+            <span v-else class="muted">—</span>
+          </template>
+          <template v-else-if="column.dataIndex === 'is_urgent'">
             <a-tag v-if="record.is_urgent" color="red">{{ t('orders.urgent') }}</a-tag>
             <span v-else class="muted">—</span>
           </template>
@@ -132,6 +138,13 @@
         <a-form-item :label="t('review.noteOrderStep')">
           <a-input
             :value="`${approveTarget?.order_no} · ${approveTarget?.experiment_name || ''}`"
+            readonly
+          />
+        </a-form-item>
+        <a-form-item v-if="approveTarget?.requirements" :label="t('orders.requirements')">
+          <a-textarea
+            :value="approveTarget.requirements"
+            :rows="3"
             readonly
           />
         </a-form-item>
@@ -326,7 +339,8 @@ const memberOptions = computed(() =>
 
 const waitingColumns = computed(() => [
   { title: t('orders.orderNo'), dataIndex: 'order_no', width: 200 },
-  { title: t('review.experiment'), dataIndex: 'experiment_name' },
+  { title: t('review.experiment'), dataIndex: 'experiment_name', width: 200 },
+  { title: t('orders.requirements'), dataIndex: 'requirements', ellipsis: true },
   { title: t('review.requester'), dataIndex: 'user_name', width: 140 },
   { title: t('orders.lotId'), dataIndex: 'lot_id', width: 120 },
   { title: t('orders.urgent'), dataIndex: 'is_urgent', width: 80 },
@@ -617,5 +631,15 @@ function formatDate(value) {
 .schedule-cell {
   font-size: 12px;
   line-height: 1.6;
+}
+.requirements-snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.5;
 }
 </style>

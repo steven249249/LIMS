@@ -58,6 +58,18 @@
               </a-checkbox>
             </a-form-item>
 
+            <a-form-item
+              :label="t('orders.requirements')"
+              name="requirements"
+              :rules="[{ required: true, message: t('createOrder.requireRequirements') }]"
+            >
+              <a-textarea
+                v-model:value="form.requirements"
+                :rows="4"
+                :placeholder="t('createOrder.requirementsPlaceholder')"
+              />
+            </a-form-item>
+
             <a-form-item :label="t('orders.remark')" name="remark">
               <a-textarea
                 v-model:value="form.remark"
@@ -138,6 +150,7 @@ const form = reactive({
   experiment: undefined,
   is_urgent: false,
   lot_id: '',
+  requirements: '',
   remark: '',
 })
 
@@ -172,6 +185,7 @@ async function handleSubmit() {
       experiment: form.experiment,
       is_urgent: form.is_urgent,
       lot_id: form.lot_id,
+      requirements: form.requirements,
       remark: form.remark,
     }
     const { data } = await createOrder(payload)
@@ -195,6 +209,7 @@ function resetForm() {
   form.experiment = undefined
   form.is_urgent = false
   form.lot_id = ''
+  form.requirements = ''
   form.remark = ''
   success.value = false
   createdOrderNo.value = null

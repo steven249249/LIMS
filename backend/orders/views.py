@@ -93,6 +93,7 @@ class OrderCreateView(APIView):
             experiment=experiment,
             is_urgent=ser.validated_data.get('is_urgent', False),
             lot_id=ser.validated_data.get('lot_id', ''),
+            requirements=ser.validated_data.get('requirements', ''),
             remark=ser.validated_data.get('remark', ''),
         )
         return Response(

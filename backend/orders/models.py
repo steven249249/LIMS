@@ -61,6 +61,12 @@ class Order(models.Model):
     schedule_start = models.DateTimeField(null=True, blank=True)
     schedule_end = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True, default='')
+    requirements = models.TextField(
+        blank=True,
+        default='',
+        help_text="What the requester needs from this experiment — surfaced "
+                  "to the lab manager during scheduling.",
+    )
     remark = models.TextField(blank=True, default='')
 
     class Meta:

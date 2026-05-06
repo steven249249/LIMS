@@ -21,6 +21,7 @@ class OrderStageSerializer(serializers.ModelSerializer):
     lot_id = serializers.CharField(source='order.lot_id', read_only=True)
     experiment_name = serializers.CharField(source='order.experiment.name', read_only=True)
     is_urgent = serializers.BooleanField(source='order.is_urgent', read_only=True)
+    requirements = serializers.CharField(source='order.requirements', read_only=True)
     remark = serializers.CharField(source='order.remark', read_only=True)
     equipment_type_name = serializers.CharField(source='equipment_type.name', read_only=True)
 
@@ -30,7 +31,7 @@ class OrderStageSerializer(serializers.ModelSerializer):
             'id', 'step_order', 'department_name',
             'status', 'assignee', 'assignee_name', 'equipment', 'equipment_code',
             'order_no', 'user_name', 'lot_id',
-            'experiment_name', 'is_urgent', 'remark', 'equipment_type_name',
+            'experiment_name', 'is_urgent', 'requirements', 'remark', 'equipment_type_name',
             'schedule_start', 'schedule_end', 'completed_at',
         ]
 
@@ -44,8 +45,9 @@ class OrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
-            'id', 'order_no', 'user_name', 'experiment_name', 
-            'lot_id', 'status', 'is_urgent', 'created_at', 'stages'
+            'id', 'order_no', 'user_name', 'experiment_name',
+            'lot_id', 'status', 'is_urgent', 'requirements', 'remark',
+            'created_at', 'stages',
         ]
         read_only_fields = ['id', 'order_no', 'status', 'created_at']
 
@@ -76,7 +78,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'experiment', 'experiment_name', 'experiment_details',
             'status', 'is_urgent', 'lot_id', 'assignee', 'assignee_name',
             'schedule_start', 'schedule_end',
-            'rejection_reason', 'remark',
+            'rejection_reason', 'requirements', 'remark',
             'created_at', 'updated_at', 'ended_at',
             'stages',
         ]
@@ -96,6 +98,7 @@ class OrderCreateSerializer(serializers.Serializer):
     experiment = serializers.UUIDField()
     is_urgent = serializers.BooleanField(default=False)
     lot_id = serializers.CharField(required=False, default='', allow_blank=True)
+    requirements = serializers.CharField(required=False, default='', allow_blank=True)
     remark = serializers.CharField(required=False, default='', allow_blank=True)
 
 

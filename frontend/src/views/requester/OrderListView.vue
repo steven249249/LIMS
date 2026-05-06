@@ -25,18 +25,6 @@
         <template v-if="column.dataIndex === 'order_no'">
           <a-typography-text strong>{{ record.order_no }}</a-typography-text>
         </template>
-        <template v-else-if="column.dataIndex === 'progress'">
-          <div class="relay-mini-track">
-            <a-tooltip
-              v-for="s in record.stages || []"
-              :key="s.id"
-              :title="`${s.department_name} · ${statusLabel(s.status)}`"
-            >
-              <span class="relay-dot" :class="`dot-${s.status}`"></span>
-            </a-tooltip>
-            <span v-if="!(record.stages || []).length" class="muted">{{ t('orders.noStages') }}</span>
-          </div>
-        </template>
         <template v-else-if="column.dataIndex === 'status'">
           <a-tag :color="statusColor(record.status)">{{ statusLabel(record.status) }}</a-tag>
         </template>
@@ -60,33 +48,6 @@
       placement="right"
     >
       <template v-if="selectedOrder">
-        <a-card :title="t('orders.relayProgress')" :bordered="false" size="small" class="detail-card">
-          <a-steps
-            v-if="(selectedOrder.stages || []).length"
-            :current="currentStepIndex"
-            size="small"
-            :status="overallStepsStatus"
-          >
-            <a-step
-              v-for="stage in selectedOrder.stages"
-              :key="stage.id"
-              :title="stage.department_name"
-              :status="stepStatus(stage)"
-            >
-              <template #description>
-                <div class="step-desc">
-                  <a-tag :color="stageStatusColor(stage.status)">
-                    {{ statusLabel(stage.status) }}
-                  </a-tag>
-                </div>
-              </template>
-            </a-step>
-          </a-steps>
-          <a-empty v-else :description="t('orders.noRelayStages')" />
-        </a-card>
-
-        <a-divider />
-
         <a-descriptions :title="t('orders.generalInfo')" bordered :column="2" size="small">
           <a-descriptions-item :label="t('orders.orderNo')" :span="2">
             <code>{{ selectedOrder.order_no }}</code>
@@ -144,8 +105,16 @@
         <a-divider />
 
         <div class="remark-block">
+          <h4>{{ t('orders.requirements') }}</h4>
+          <p v-if="selectedOrder.requirements" style="white-space: pre-wrap">{{ selectedOrder.requirements }}</p>
+          <a-empty v-else :description="t('orders.noRequirements')" :image-style="{ height: 40 }" />
+        </div>
+
+        <a-divider />
+
+        <div class="remark-block">
           <h4>{{ t('orders.remark') }}</h4>
-          <p v-if="selectedOrder.remark">{{ selectedOrder.remark }}</p>
+          <p v-if="selectedOrder.remark" style="white-space: pre-wrap">{{ selectedOrder.remark }}</p>
           <a-empty v-else :description="t('orders.noRemark')" :image-style="{ height: 40 }" />
         </div>
       </template>
@@ -176,7 +145,6 @@ const columns = computed(() => [
   { title: t('orders.orderNo'), dataIndex: 'order_no', width: 200, fixed: 'left' },
   { title: t('orders.experiment'), dataIndex: 'experiment_name', width: 220 },
   { title: t('orders.lotId'), dataIndex: 'lot_id', width: 130 },
-  { title: t('orders.progress'), dataIndex: 'progress', width: 200 },
   { title: t('orders.urgent'), dataIndex: 'is_urgent', width: 80 },
   { title: t('orders.status'), dataIndex: 'status', width: 110 },
   { title: '', dataIndex: '__actions__', width: 100, fixed: 'right' },
@@ -214,26 +182,6 @@ const currentStage = computed(() => {
   )
 })
 
-const currentStepIndex = computed(() => {
-  if (!selectedOrder.value?.stages?.length) return 0
-  const idx = selectedOrder.value.stages.findIndex((s) => s.status !== 'done')
-  return idx === -1 ? selectedOrder.value.stages.length - 1 : idx
-})
-
-const overallStepsStatus = computed(() => {
-  if (!selectedOrder.value) return 'process'
-  if (selectedOrder.value.status === 'rejected') return 'error'
-  if (selectedOrder.value.status === 'done') return 'finish'
-  return 'process'
-})
-
-function stepStatus(stage) {
-  return {
-    pending: 'wait', waiting: 'wait',
-    in_progress: 'process', done: 'finish', rejected: 'error',
-  }[stage.status] || 'wait'
-}
-
 function statusLabel(s) {
   return t(`orders.statusLabels.${s}`, s)
 }
@@ -242,9 +190,6 @@ function statusColor(s) {
     created: 'default', waiting: 'warning', pending: 'default',
     in_progress: 'processing', done: 'success', rejected: 'error',
   }[s] || 'default'
-}
-function stageStatusColor(s) {
-  return statusColor(s)
 }
 
 function formatDate(value) {
@@ -256,43 +201,10 @@ function formatDate(value) {
 .orders-page {
   padding: 0;
 }
-.relay-mini-track {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.relay-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #d9d9d9;
-  display: inline-block;
-}
-.dot-done { background: #52c41a; }
-.dot-in_progress {
-  background: #1890ff;
-  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.2);
-  animation: pulse 1.6s infinite;
-}
-.dot-waiting { background: #faad14; }
-.dot-pending { background: #d9d9d9; }
-.dot-rejected { background: #f5222d; }
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-}
 .muted {
   color: var(--c-text-muted);
   font-style: italic;
   font-size: 12px;
-}
-.detail-card :deep(.ant-card-body) {
-  padding: 16px 12px;
-}
-.step-desc {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.55);
 }
 .remark-block h4 {
   margin: 0 0 8px;

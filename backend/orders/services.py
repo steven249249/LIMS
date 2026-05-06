@@ -69,6 +69,7 @@ def create_order(
     experiment,
     is_urgent=False,
     lot_id='',
+    requirements='',
     remark='',
 ) -> Order:
     """Phase 1 — Requester picks an experiment; the order goes to that
@@ -101,6 +102,7 @@ def create_order(
         experiment=experiment,
         is_urgent=is_urgent,
         lot_id=lot_id,
+        requirements=requirements,
         remark=remark,
         status=Order.Status.WAITING,
     )
