@@ -66,13 +66,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             gunicorn backend.wsgi:application
-                      --bind 0.0.0.0:8000
-                      --workers 4
-                      --access-logfile -
-                      --error-logfile -"
+    # Single-line sh -c so YAML folding doesn't sneak in literal newlines that
+    # `sh` then mis-reads as separate commands. `exec` hands PID 1 to gunicorn
+    # so `docker stop` sends SIGTERM straight to the worker (fast clean shutdown).
+    command: sh -c "python manage.py migrate --noinput && exec gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 4 --access-logfile - --error-logfile -"
 
   # ── Celery Worker (no critical-path job uses it yet — kept hot) ─
   celery:
