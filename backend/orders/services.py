@@ -63,53 +63,81 @@ def _assert_transition(order: Order, target: str):
 
 # ── Public API ─────────────────────────────────────────────────────────────
 
-def create_order(*, user, experiment, is_urgent=False, lot_id='', remark='') -> Order:
-    """
-    Phase 1 – Requester creates order.
+def create_order(
+    *,
+    user,
+    equipment_type,
+    target_department=None,
+    experiment=None,
+    is_urgent=False,
+    lot_id='',
+    remark='',
+) -> Order:
+    """Phase 1 — Requester sends the wafer to a single lab.
 
-    The order is born in WAITING (not IN_PROGRESS) — it is *waiting for the
-    first lab manager to approve & schedule its first stage*. Only after
-    that approval does the order actually transition to IN_PROGRESS, which
-    matches the documented state machine in the module docstring above.
+    Each Order is now exactly one lab visit (one OrderStage). The full wafer
+    journey is driven by the requester: when this order finishes, they
+    submit a follow-up order targeting the next lab. No more auto-generated
+    multi-step pipeline.
 
-    System also generates one OrderStage per experiment step. Step 1 starts
-    in WAITING (eligible for manager approval). Subsequent steps start in
-    PENDING (locked behind their predecessor) and are flipped to WAITING by
-    ``complete_stage`` once the previous step finishes.
+    Required:
+        ``equipment_type`` — what tool the wafer needs.
+
+    Optional:
+        ``target_department`` — explicit target lab. When omitted, defaults
+        to the lab whose first registered Equipment of this type is found
+        (deterministic via ordering by code).
+
+        ``experiment`` — historical/grouping tag only. Stages are no longer
+        auto-generated from its recipe.
+
+    State transitions on creation:
+        Order  → WAITING            (waiting for the target lab manager)
+        Stage  → WAITING            (the one and only stage)
     """
     if not user.department:
         raise ValidationError("User must belong to a department to create orders.")
 
+    # Resolve target department.
+    if target_department is None:
+        first_eq = (
+            equipment_type.equipments
+            .filter(department__isnull=False)
+            .order_by('code')
+            .first()
+        )
+        if first_eq is None:
+            raise ValidationError(
+                f"No lab has any '{equipment_type.name}' equipment registered yet — "
+                "ask the admin to provision a unit before submitting."
+            )
+        target_department = first_eq.department
+
     order = Order.objects.create(
         user=user,
         department=user.department,
-        experiment=experiment,
+        experiment=experiment,                     # nullable, optional tag
         is_urgent=is_urgent,
         lot_id=lot_id,
         remark=remark,
         status=Order.Status.WAITING,
     )
 
-    # Generate Stages based on Experiment Steps
-    steps = ExperimentRequiredEquipment.objects.filter(experiment=experiment).order_by('step_order')
-    
-    stage_objs = []
-    for step in steps:
-        stage = OrderStage(
-            order=order,
-            step_order=step.step_order,
-            department=step.equipment_type.equipments.first().department, # Auto-assign based on machine ownership
-            equipment_type=step.equipment_type,
-            status=OrderStage.Status.PENDING
-        )
-        stage_objs.append(stage)
+    OrderStage.objects.create(
+        order=order,
+        step_order=1,
+        department=target_department,
+        equipment_type=equipment_type,
+        status=OrderStage.Status.WAITING,
+    )
 
-    if stage_objs:
-        stage_objs[0].status = OrderStage.Status.WAITING
-        OrderStage.objects.bulk_create(stage_objs)
-        # Notify first lab manager
-        _send_notification(stage_objs[0].department.members.filter(role='lab_manager').first(), 
-                           f"New task waiting in your lab for Order {order.order_no}")
+    # Notify the target lab's manager so they pick it up promptly.
+    target_manager = target_department.members.filter(role='lab_manager').first()
+    _send_notification(
+        target_manager,
+        f"New wafer-test request for your lab: Order {order.order_no} "
+        f"(equipment type: {equipment_type.name})",
+    )
 
     return order
 
@@ -170,17 +198,22 @@ def approve_and_schedule_stage(stage: OrderStage, *, schedule_start, schedule_en
 
 
 def complete_stage(stage: OrderStage) -> OrderStage:
-    """Member completes a specific stage. Triggers next stage relay."""
+    """Member finishes the lab visit. The wafer is ready for pickup.
+
+    Each order is one lab visit, so completing the stage immediately marks the
+    parent order DONE. The requester is notified so they can collect the wafer
+    and submit a follow-up order to the next lab if their flow needs more steps.
+    """
     if stage.status != OrderStage.Status.IN_PROGRESS:
         raise ValidationError("Only in-progress stages can be completed.")
-    
+
     if stage.schedule_start and timezone.now() < stage.schedule_start:
         raise ValidationError("Cannot complete a task before its scheduled start time.")
 
     now = timezone.now()
     stage.status = OrderStage.Status.DONE
     stage.completed_at = now
-    stage.schedule_end = now  # Release early in stage data
+    stage.schedule_end = now  # release early in stage data
     stage.save()
 
     # Release equipment booking early
@@ -190,31 +223,19 @@ def complete_stage(stage: OrderStage) -> OrderStage:
         booking.ended_at = now
         booking.save()
 
-    # Release equipment status
     if stage.equipment:
         stage.equipment.status = Equipment.Status.AVAILABLE
         stage.equipment.save()
 
-    # Relay Logic: Find next stage
-    next_stage = OrderStage.objects.filter(
-        order=stage.order, 
-        step_order__gt=stage.step_order
-    ).order_by('step_order').first()
-
-    if next_stage:
-        next_stage.status = OrderStage.Status.WAITING
-        next_stage.save()
-        # NOTIFICATION: Notify next manager
-        mgr = next_stage.department.members.filter(role='lab_manager').first()
-        if mgr:
-            _send_notification(mgr, f"Sample relay: Order {stage.order.order_no} is now waiting in your lab.")
-    else:
-        # Last stage done -> Overall Order is Done
-        order = stage.order
-        order.status = Order.Status.DONE
-        order.ended_at = timezone.now()
-        order.save()
-        _send_notification(order.user, f"Your multi-stage experiment {order.order_no} is fully COMPLETED.")
+    order = stage.order
+    order.status = Order.Status.DONE
+    order.ended_at = now
+    order.save(update_fields=['status', 'ended_at', 'updated_at'])
+    _send_notification(
+        order.user,
+        f"Wafer for Order {order.order_no} is ready — pick it up and submit "
+        "a new request if it needs another lab.",
+    )
 
     return stage
 

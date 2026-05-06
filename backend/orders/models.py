@@ -26,9 +26,15 @@ class Order(models.Model):
         related_name='orders',
     )
     order_no = models.CharField(max_length=30, unique=True, editable=False)
+    # In the single-lab-per-order model the experiment is no longer the
+    # driver of stage generation — each order is one lab visit. Keeping the
+    # field as a nullable optional tag so legacy orders still resolve and
+    # admins can group historical batches if they want.
     experiment = models.ForeignKey(
         'equipments.Experiment',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='orders',
     )
     lot_id = models.CharField(max_length=50, blank=True, default='',

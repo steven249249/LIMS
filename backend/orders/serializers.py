@@ -56,6 +56,8 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     stages = OrderStageSerializer(many=True, read_only=True)
 
     def get_experiment_details(self, obj):
+        if obj.experiment is None:
+            return None
         from equipments.serializers import ExperimentSerializer
         return ExperimentSerializer(obj.experiment).data
 
@@ -79,8 +81,16 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
 
 class OrderCreateSerializer(serializers.Serializer):
-    """Requester creates order – schedule is NOT set here (Manager does it later)."""
-    experiment = serializers.UUIDField()
+    """Requester creates a single-lab-visit order.
+
+    The wafer journey is now driven step by step by the requester: each Order
+    represents exactly one lab visit, so the payload describes WHICH equipment
+    type the wafer needs and (optionally) WHICH lab to send it to. The legacy
+    ``experiment`` field is still accepted as an optional grouping tag.
+    """
+    equipment_type = serializers.UUIDField()
+    target_department = serializers.UUIDField(required=False, allow_null=True)
+    experiment = serializers.UUIDField(required=False, allow_null=True)
     is_urgent = serializers.BooleanField(default=False)
     lot_id = serializers.CharField(required=False, default='', allow_blank=True)
     remark = serializers.CharField(required=False, default='', allow_blank=True)

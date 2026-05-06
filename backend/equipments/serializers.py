@@ -17,7 +17,10 @@ class EquipmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Equipment
-        fields = ['id', 'equipment_type', 'type_name', 'code', 'status', 'department_name']
+        fields = [
+            'id', 'equipment_type', 'type_name', 'code', 'status',
+            'department', 'department_name',
+        ]
 
 
 class ExperimentRequiredEquipmentSerializer(serializers.ModelSerializer):

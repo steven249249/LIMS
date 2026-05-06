@@ -27,41 +27,71 @@ from tests.factories import (
 
 @pytest.mark.unit
 class TestCreateOrder:
-    def test_user_without_department_is_rejected(self, db):
+    def test_user_without_department_is_rejected(self, db, equipment_type):
         # Arrange — user with no department
         user = UserFactory(department=None)
-        experiment = ExperimentFactory()
         # Act / Assert
         with pytest.raises(ValidationError, match='department'):
-            services.create_order(user=user, experiment=experiment)
+            services.create_order(user=user, equipment_type=equipment_type)
 
-    def test_creates_order_and_first_stage_in_waiting(self, db, employee, equipment_type):
-        # Arrange — experiment with one required equipment + matching unit
-        experiment = ExperimentFactory.with_requirement(
-            equipment_type=equipment_type, step_order=1,
-        )
+    def test_rejected_when_no_lab_owns_the_equipment_type(self, db, employee, equipment_type):
+        # Arrange — no Equipment registered for this type anywhere
+        # Act / Assert — single-lab-per-order needs a deterministic target
+        with pytest.raises(ValidationError, match='No lab has any'):
+            services.create_order(user=employee, equipment_type=equipment_type)
+
+    def test_creates_order_and_single_stage_in_waiting(self, db, employee, equipment_type):
+        # Arrange — at least one unit exists at a lab so target_department can
+        # be resolved automatically.
         EquipmentFactory(equipment_type=equipment_type, department=employee.department)
         # Act
-        order = services.create_order(user=employee, experiment=experiment, lot_id='L-001')
-        # Assert — order itself is WAITING (not IN_PROGRESS); only the first
-        # stage is WAITING and the rest (here only one) PENDING. Documented
-        # state machine: Created → Waiting (auto) → In Progress (manager approve).
+        order = services.create_order(
+            user=employee, equipment_type=equipment_type, lot_id='L-001',
+        )
+        # Assert — order itself is WAITING; exactly one stage is created and
+        # it sits in WAITING for the lab manager to schedule.
         assert order.status == Order.Status.WAITING
         assert order.lot_id == 'L-001'
         stages = list(order.stages.order_by('step_order'))
         assert len(stages) == 1
         assert stages[0].status == OrderStage.Status.WAITING
+        assert stages[0].equipment_type == equipment_type
+
+    def test_target_department_can_be_passed_explicitly(self, db, employee, equipment_type):
+        # Arrange — owning lab for the equipment differs from the requester's
+        # own department; explicit target_department should win.
+        from tests.factories import DepartmentFactory
+        target = DepartmentFactory(name='Lab-Target')
+        EquipmentFactory(equipment_type=equipment_type, department=target)
+        # Act
+        order = services.create_order(
+            user=employee, equipment_type=equipment_type, target_department=target,
+        )
+        # Assert
+        stage = order.stages.first()
+        assert stage.department_id == target.id
 
     def test_first_manager_is_notified(self, db, employee, equipment_type, mocker):
-        # Arrange — Spy on _send_notification
+        # Arrange — Spy on _send_notification; the lab manager belongs to the
+        # owning department of the equipment unit.
         notify_spy = mocker.spy(services, '_send_notification')
-        experiment = ExperimentFactory.with_requirement(equipment_type=equipment_type)
         EquipmentFactory(equipment_type=equipment_type, department=employee.department)
         UserFactory(department=employee.department, role='lab_manager')
         # Act
-        services.create_order(user=employee, experiment=experiment)
-        # Assert — exactly one notification (to the lab manager)
+        services.create_order(user=employee, equipment_type=equipment_type)
+        # Assert — exactly one notification (to the target lab manager)
         assert notify_spy.call_count == 1
+
+    def test_optional_experiment_is_persisted_as_tag(self, db, employee, equipment_type):
+        # Arrange — experiment is now a free-form grouping tag, optional
+        EquipmentFactory(equipment_type=equipment_type, department=employee.department)
+        experiment = ExperimentFactory()
+        # Act
+        order = services.create_order(
+            user=employee, equipment_type=equipment_type, experiment=experiment,
+        )
+        # Assert
+        assert order.experiment_id == experiment.id
 
 
 @pytest.mark.unit
@@ -156,18 +186,15 @@ class TestApproveAndScheduleStage:
     ):
         """Regression: previously create_order set the order straight to
         IN_PROGRESS, skipping the documented WAITING phase. The fix sets
-        new orders to WAITING; the very first stage approval is what
-        promotes them to IN_PROGRESS. This test pins both halves."""
+        new orders to WAITING; the only stage approval is what promotes
+        them to IN_PROGRESS. This test pins both halves."""
         mocker.patch(
             'scheduling.services.allocate_equipments_for_stage', return_value=[],
         )
         # Arrange — build a real order via the public API so the WAITING
         # invariant on creation is also covered.
-        experiment = ExperimentFactory.with_requirement(
-            equipment_type=equipment_type, step_order=1,
-        )
         EquipmentFactory(equipment_type=equipment_type, department=employee.department)
-        order = services.create_order(user=employee, experiment=experiment)
+        order = services.create_order(user=employee, equipment_type=equipment_type)
         assert order.status == Order.Status.WAITING        # invariant on creation
         first_stage = order.stages.order_by('step_order').first()
         assert first_stage.status == OrderStage.Status.WAITING
@@ -253,8 +280,8 @@ class TestCompleteStage:
         assert equipment.status == 'available'
 
     @freeze_time('2026-05-02 11:00:00')
-    def test_completes_order_when_last_stage_done(self, db, order, equipment_type):
-        # Arrange — only one stage
+    def test_completes_order_when_stage_done(self, db, order, equipment_type):
+        # Arrange — single-stage order: completing the stage finishes the order.
         order.status = Order.Status.IN_PROGRESS
         order.save()
         stage = OrderStageFactory(
@@ -267,3 +294,23 @@ class TestCompleteStage:
         order.refresh_from_db()
         assert order.status == Order.Status.DONE
         assert order.ended_at is not None
+
+    @freeze_time('2026-05-02 11:00:00')
+    def test_completion_notifies_requester_to_collect_wafer(
+        self, db, order, equipment_type, mocker,
+    ):
+        # Arrange
+        notify_spy = mocker.spy(services, '_send_notification')
+        order.status = Order.Status.IN_PROGRESS
+        order.save()
+        stage = OrderStageFactory(
+            order=order, equipment_type=equipment_type,
+            status=OrderStage.Status.IN_PROGRESS,
+        )
+        # Act
+        services.complete_stage(stage)
+        # Assert — single notification to the requester, no relay handoff
+        assert notify_spy.call_count == 1
+        notified_user, msg = notify_spy.call_args[0]
+        assert notified_user == order.user
+        assert 'ready' in msg.lower()

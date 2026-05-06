@@ -28,18 +28,34 @@
             @finish="handleSubmit"
           >
             <a-form-item
-              :label="t('createOrder.experimentLabel')"
-              name="experiment"
-              :rules="[{ required: true, message: t('createOrder.requireExperiment') }]"
+              :label="t('createOrder.targetLabLabel')"
+              name="target_department"
+              :rules="[{ required: true, message: t('createOrder.requireTargetLab') }]"
             >
               <a-select
-                v-model:value="form.experiment"
-                :placeholder="t('createOrder.experimentPlaceholder')"
+                v-model:value="form.target_department"
+                :placeholder="t('createOrder.targetLabPlaceholder')"
                 show-search
                 option-filter-prop="label"
                 size="large"
-                @change="onExperimentChange"
-                :options="experimentOptions"
+                :options="labOptions"
+                @change="onLabChange"
+              />
+            </a-form-item>
+
+            <a-form-item
+              :label="t('createOrder.equipmentTypeLabel')"
+              name="equipment_type"
+              :rules="[{ required: true, message: t('createOrder.requireEquipmentType') }]"
+            >
+              <a-select
+                v-model:value="form.equipment_type"
+                :placeholder="form.target_department ? t('createOrder.equipmentTypePlaceholder') : t('createOrder.pickLabFirst')"
+                show-search
+                option-filter-prop="label"
+                size="large"
+                :options="equipmentTypeOptions"
+                :disabled="!form.target_department"
               />
             </a-form-item>
 
@@ -69,7 +85,7 @@
             <a-alert
               type="info"
               show-icon
-              :message="t('createOrder.scheduleNote')"
+              :message="t('createOrder.singleLabNote')"
               style="margin-bottom: 16px"
             />
 
@@ -95,81 +111,53 @@
       </a-col>
 
       <a-col :xs="24" :lg="10">
-        <a-card
-          v-if="!form.experiment"
-          :bordered="false"
-          :title="t('createOrder.requirementPreview')"
-        >
-          <a-empty :description="t('createOrder.requirementHint')" />
-        </a-card>
-
-        <template v-else>
-          <a-card :bordered="false" :title="t('createOrder.requiredEquipments')" class="side-card">
-            <a-list
-              :data-source="selectedExp?.required_equipments || []"
-              size="small"
-            >
-              <template #renderItem="{ item }">
-                <a-list-item>
-                  <a-list-item-meta>
-                    <template #title>
-                      <a-space>
-                        <a-tag color="blue">{{ t('review.step') }} {{ item.step_order }}</a-tag>
-                        <span class="font-bold">{{ item.equipment_type_name }}</span>
-                      </a-space>
-                    </template>
-                    <template #description>
-                      <span class="muted">{{ item.department_name }} · {{ t('createOrder.quantity') }} {{ item.quantity }}</span>
-                    </template>
-                  </a-list-item-meta>
-                </a-list-item>
-              </template>
-              <template #loadMore>
-                <a-empty
-                  v-if="!(selectedExp?.required_equipments || []).length"
-                  :description="t('createOrder.noRequirement')"
-                />
-              </template>
-            </a-list>
-          </a-card>
-
-          <a-card
-            v-if="capacity"
-            :bordered="false"
-            :title="t('createOrder.capacityCheckTitle')"
-            class="side-card"
-            style="margin-top: 16px"
-          >
-            <a-alert
-              v-if="capacity.has_shortage"
-              type="warning"
-              show-icon
-              :message="t('createOrder.shortageTitle')"
-              :description="t('createOrder.shortageDesc')"
-              style="margin-bottom: 12px"
-            />
-            <a-alert
-              v-else
-              type="success"
-              show-icon
-              :message="t('createOrder.sufficient')"
-              style="margin-bottom: 12px"
-            />
-            <a-list
-              :data-source="capacity.details"
-              size="small"
-            >
-              <template #renderItem="{ item }">
-                <a-list-item>
-                  <span>{{ item.equipment_type }}</span>
-                  <a-tag :color="item.shortage ? 'error' : 'success'">
-                    {{ item.available }} / {{ item.required }}
+        <a-card :bordered="false" :title="t('createOrder.targetLabPreview')" class="side-card">
+          <a-empty
+            v-if="!form.target_department"
+            :description="t('createOrder.pickLabHint')"
+          />
+          <template v-else>
+            <a-descriptions :column="1" size="small">
+              <a-descriptions-item :label="t('createOrder.targetLabLabel')">
+                <span class="font-bold">{{ selectedLabName }}</span>
+              </a-descriptions-item>
+              <a-descriptions-item :label="t('createOrder.availableTypes')">
+                <a-space wrap>
+                  <a-tag
+                    v-for="t in equipmentTypesAtLab"
+                    :key="t.id"
+                    :color="t.id === form.equipment_type ? 'blue' : 'default'"
+                  >
+                    {{ t.name }}
                   </a-tag>
-                </a-list-item>
-              </template>
-            </a-list>
-          </a-card>
-        </template>
+                </a-space>
+              </a-descriptions-item>
+            </a-descriptions>
+
+            <a-divider style="margin: 12px 0" />
+
+            <div v-if="form.equipment_type">
+              <div class="muted" style="margin-bottom: 6px">
+                {{ t('createOrder.unitsAtLab') }}
+              </div>
+              <a-list
+                :data-source="unitsForSelected"
+                size="small"
+              >
+                <template #renderItem="{ item }">
+                  <a-list-item>
+                    <a-space>
+                      <a-tag :color="item.status === 'available' ? 'success' : 'warning'">
+                        {{ item.status }}
+                      </a-tag>
+                      <span class="font-bold">{{ item.code }}</span>
+                    </a-space>
+                  </a-list-item>
+                </template>
+              </a-list>
+            </div>
+          </template>
+        </a-card>
       </a-col>
     </a-row>
   </div>
@@ -180,58 +168,93 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { message } from 'ant-design-vue'
 import { SendOutlined } from '@ant-design/icons-vue'
-import { fetchCapacityCheck, fetchExperiments } from '../../api/equipments'
+import { fetchEquipments } from '../../api/equipments'
 import { createOrder } from '../../api/orders'
 
 const { t } = useI18n()
 
-const experiments = ref([])
-const capacity = ref(null)
+const equipments = ref([])
 const loading = ref(false)
 const error = ref('')
 const success = ref(false)
 const createdOrderNo = ref(null)
 
 const form = reactive({
-  experiment: undefined,
+  target_department: undefined,
+  equipment_type: undefined,
   is_urgent: false,
   lot_id: '',
   remark: '',
 })
 
-const experimentOptions = computed(() =>
-  experiments.value.map((exp) => ({ label: exp.name, value: exp.id })),
+// Group equipments by department for the lab dropdown.
+const labOptions = computed(() => {
+  const map = new Map()
+  for (const eq of equipments.value) {
+    if (!eq.department) continue
+    if (!map.has(eq.department)) {
+      map.set(eq.department, eq.department_name || eq.department)
+    }
+  }
+  return Array.from(map.entries()).map(([id, name]) => ({ value: id, label: name }))
+})
+
+const selectedLabName = computed(() => {
+  const opt = labOptions.value.find((o) => o.value === form.target_department)
+  return opt?.label || ''
+})
+
+// Equipment types available within the picked lab (deduped by type id).
+const equipmentTypesAtLab = computed(() => {
+  if (!form.target_department) return []
+  const seen = new Map()
+  for (const eq of equipments.value) {
+    if (eq.department !== form.target_department) continue
+    if (!seen.has(eq.equipment_type)) {
+      seen.set(eq.equipment_type, { id: eq.equipment_type, name: eq.type_name })
+    }
+  }
+  return Array.from(seen.values())
+})
+
+const equipmentTypeOptions = computed(() =>
+  equipmentTypesAtLab.value.map((t) => ({ value: t.id, label: t.name })),
 )
 
-const selectedExp = computed(() =>
-  experiments.value.find((e) => e.id === form.experiment),
+const unitsForSelected = computed(() =>
+  equipments.value.filter(
+    (eq) =>
+      eq.department === form.target_department &&
+      eq.equipment_type === form.equipment_type,
+  ),
 )
 
 onMounted(async () => {
   try {
-    const { data } = await fetchExperiments()
-    experiments.value = data.results || data
+    const { data } = await fetchEquipments()
+    equipments.value = data.results || data
   } catch {
-    message.error(t('createOrder.loadExpFailed'))
+    message.error(t('createOrder.loadEquipmentsFailed'))
   }
 })
 
-async function onExperimentChange() {
-  capacity.value = null
-  if (!form.experiment) return
-  try {
-    const { data } = await fetchCapacityCheck(form.experiment)
-    capacity.value = data
-  } catch {
-    /* capacity check is informational; failure should not block submission */
-  }
+function onLabChange() {
+  // Reset the type when the lab changes — types are scoped to the picked lab.
+  form.equipment_type = undefined
 }
 
 async function handleSubmit() {
   error.value = ''
   loading.value = true
   try {
-    const { data } = await createOrder(form)
+    const payload = {
+      target_department: form.target_department,
+      equipment_type: form.equipment_type,
+      is_urgent: form.is_urgent,
+      lot_id: form.lot_id,
+      remark: form.remark,
+    }
+    const { data } = await createOrder(payload)
     createdOrderNo.value = data.order_no
     success.value = true
     message.success(t('createOrder.successTitle', { orderNo: data.order_no }))
@@ -249,11 +272,11 @@ async function handleSubmit() {
 }
 
 function resetForm() {
-  form.experiment = undefined
+  form.target_department = undefined
+  form.equipment_type = undefined
   form.is_urgent = false
   form.lot_id = ''
   form.remark = ''
-  capacity.value = null
   success.value = false
   createdOrderNo.value = null
 }
