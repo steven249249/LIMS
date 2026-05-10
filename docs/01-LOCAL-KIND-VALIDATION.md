@@ -178,20 +178,39 @@ kill %1
 ### 7c. 從瀏覽器打整套 SPA + API
 
 ```bash
-# kind-config.yaml 已經把 host:8080 → cluster:30080,但 Service 是 ClusterIP,
-# 所以直接 port-forward frontend Service:
-kubectl port-forward -n lims-local svc/lims-lims-frontend 8080:8080 &
-kubectl port-forward -n lims-local svc/lims-lims-backend 8000:8000 &
+# 只需要一個 port-forward。nginx 自己代理 /api/*、/admin/*、/static/*
+# 到 backend service,所以瀏覽器只要打 frontend 的 port 就好。
+kubectl port-forward -n lims-local svc/lims-lims-frontend 18080:8080
 ```
 
-開瀏覽器 → `http://localhost:8080` → 應該看到登入畫面。
-帳號 `testuser` / 密碼 `Lims@2026!Init`(demo seed 自帶的)。
+> ⚠️ **一定要用 18080 不要用 8080。** host port 8080 容易撞到別的 listener
+> (殘留的 docker compose、kind 自己的 NodePort handler 都會 listen 0.0.0.0:8080),
+> 結果連線被 reset。任何 ≥ 10000 的閒置 port 都行。
+
+開瀏覽器 → **http://localhost:18080/** → 登入畫面。
+
+| Username | Password | Role | 可以做什麼 |
+|---|---|---|---|
+| `testuser` | `Lims@2026!Init` | 廠區使用者 | 送樣 (`/orders/create`)、看自己訂單 |
+| `Lab_Mgr_Photo` | `Lims@2026!Init` | Photolithography Lab 主管 | 看 Photo lab 訂單、排程、指派 |
+| `Lab_Mgr_Process` | `Lims@2026!Init` | Thin Film & Etch Lab 主管 | 同 Photo,範圍是 Process lab |
+| `Lab_Mgr_QC` | `Lims@2026!Init` | Metrology & Inspection Lab 主管 | 同上 |
+| `Lab_Mem_Photo_001` | `Lims@2026!Init` | Photo lab 成員 | 完成 Photo 的 stage |
+| `Lab_Mem_Process_001` | `Lims@2026!Init` | Process lab 成員 | 完成 Process 的 stage |
+| `Lab_Mem_QC_001` | `Lims@2026!Init` | QC lab 成員 | 完成 QC 的 stage |
+| `admin` | `AdminLocal_2026!Init` | superuser | `/admin/` 全部 + Django `/django-admin/` |
+
+> 全部 demo 帳號的密碼都是同一個 (`Lims@2026!Init`),由 [`backend/users/migrations/0003_create_demo_org.py:27`](backend/users/migrations/0003_create_demo_org.py#L27) 的 `DEFAULT_PASSWORD` 設。**只在 `SEED_DEMO_DATA=True` 時才會建這些帳號** — `helm/lims/envs/local.yaml` 已經設好了。
+>
+> `admin` 帳號的密碼則是來自環境變數 `LIMS_ADMIN_PASSWORD`,kind 模式下由 [`helm/lims/values.yaml`](helm/lims/values.yaml) 的 `localSecrets.limsAdminPassword` 提供。
 
 ### 7d. 測 admin 後台
 
-開 `http://localhost:8080/admin/` (超管 `admin` / `AdminLocal_2026!Init` — 在 envs/local.yaml 的 `localSecrets.limsAdminPassword`)。
+兩個 admin:
+- `https://localhost:18080/admin/` — 我們自己的 SPA admin console (用 admin 帳號 + JWT)
+- `https://localhost:18080/django-admin/` — Django 內建 admin (用 admin 帳號 + session cookie)
 
-**注意:** demo seed 的 `users.0002_create_default_admin` migration 仍然用環境變數 `LIMS_ADMIN_PASSWORD` 來建 admin 密碼。在 kind 裡這個值來自 `local-secret.yaml`(`AdminLocal_2026!Init`)。
+兩個都可以,SPA admin 較好用。
 
 ---
 
