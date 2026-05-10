@@ -1,0 +1,219 @@
+# 01 · 本地 kind 驗證手冊
+
+在實際丟到 GCP 之前,用本地 kind 跑一輪。這份步驟跟 `make kind-*` target 是一樣的,但拆開來方便你看每一步在做什麼、出問題時要看哪裡。
+
+我已經確認過兩個 K8s image 都能 build 起來、單獨用 docker 跑 healthz 都回 200。下面要做的是把它們塞進 K8s 裡跟 mysql / redis 兜起來。
+
+---
+
+## 0. 前置工具安裝
+
+我這邊沒有權限直接從網路下載 binary,請你裝這三個:
+
+```bash
+# kind v0.24.0
+curl -Lo /tmp/kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64
+sudo install -m 0755 /tmp/kind /usr/local/bin/kind
+kind version          # 應該印 kind v0.24.0 ...
+
+# kubectl (跟 cluster 同版本即可,kind v0.24.0 預設帶 1.31)
+curl -Lo /tmp/kubectl https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl
+sudo install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+kubectl version --client
+
+# helm 3
+curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+helm version          # 應該印 v3.x
+```
+
+如果你不想 sudo,可以放在 `~/.local/bin` 並把它加進 PATH。
+
+---
+
+## 1. 確認 docker-compose 已關
+
+```bash
+cd "/media/hcis-s15/ssd2/Lab project"
+docker compose ps        # 應該全空
+```
+
+我已經幫你 `docker compose down` 過了。如果還有殘留容器:
+
+```bash
+docker compose down -v   # -v 連 volume 也清掉
+```
+
+---
+
+## 2. 起 kind cluster
+
+```bash
+make kind-up
+```
+
+這會跑 `kind create cluster --name lims-local --config scripts/kind-config.yaml`。配置會把 host 的 8080 port 對到 cluster 內的 NodePort 30080,讓你不用 port-forward 也能 curl。
+
+**驗證:**
+```bash
+kubectl cluster-info --context kind-lims-local
+kubectl get nodes
+# NAME                       STATUS   ROLES           AGE
+# lims-local-control-plane   Ready    control-plane   30s
+```
+
+---
+
+## 3. 裝 in-cluster MySQL + Redis (取代 Cloud SQL / Memorystore)
+
+```bash
+make kind-deps
+```
+
+跑兩個 bitnami chart:
+
+| Service | Address (cluster-internal) | 用途 |
+|---|---|---|
+| `lims-mysql` | `lims-mysql.lims-local.svc:3306` | 取代 Cloud SQL |
+| `lims-redis-master` | `lims-redis-master.lims-local.svc:6379` | 取代 Memorystore |
+
+**驗證:**
+```bash
+kubectl get pods -n lims-local
+# NAME                READY   STATUS    AGE
+# lims-mysql-0        1/1     Running   90s
+# lims-redis-master-0 1/1     Running   90s
+```
+
+---
+
+## 4. Build + 載入鏡像
+
+```bash
+make kind-build       # 跑兩個 docker build
+make kind-load        # kind load docker-image lims/backend:local lims/frontend:local
+```
+
+`kind load` 會直接把 host 上的 image 複製到 kind node container 內,不用任何 registry。
+
+**驗證:**
+```bash
+docker exec lims-local-control-plane crictl images | grep lims
+# docker.io/lims/backend     local  ...
+# docker.io/lims/frontend    local  ...
+```
+
+---
+
+## 5. helm install LIMS
+
+```bash
+make kind-deploy
+```
+
+跑的是:
+```bash
+helm upgrade --install lims helm/lims/ \
+  --namespace lims-local --create-namespace \
+  -f helm/lims/envs/local.yaml \
+  --set image.tag=local \
+  --wait --timeout 5m
+```
+
+`envs/local.yaml` 已經把 cloudSql.enabled 設 false、externalSecrets.enabled 設 false、ingress.enabled 設 false,所以不需要 GCP 任何東西。
+
+**會發生什麼:**
+
+1. ConfigMap + 本地 Secret 建立
+2. PreSync `migrate` Job 跑 `python manage.py migrate --noinput`(MySQL 第一次連線會跑全部 migration,包含 demo seed,因為 `SEED_DEMO_DATA=True`)
+3. backend Deployment + frontend Deployment 起來
+4. PodDisruptionBudget、HPA(disabled,replicas=1)、PodMonitor(disabled in local)套用
+
+**第一次跑大概要 2 分鐘**(主要是 migrate Job 把 14 筆 migration 跑完)。
+
+---
+
+## 6. 確認狀態
+
+```bash
+make kind-status
+```
+
+預期:
+```
+── pods ─────────────────────────────────────────
+NAME                              READY   STATUS      AGE
+lims-lims-backend-xxxxxxxxx-xxx   1/1     Running     2m
+lims-lims-frontend-xxxxxxxx-xxx   1/1     Running     2m
+lims-lims-migrate                 0/1     Completed   2m
+lims-mysql-0                      1/1     Running     5m
+lims-redis-master-0               1/1     Running     5m
+```
+
+**Migration Job 應該是 `Completed`**(`0/1` 是 K8s 顯示「0 個容器還在跑」,Job 結束後是正常的)。
+
+---
+
+## 7. 功能驗證
+
+### 7a. Health probe
+
+```bash
+make kind-test
+```
+
+會起一個 curl pod,從 cluster 內部打 `/healthz` + `/readyz`。預期兩個都 200。
+
+### 7b. 從 host 打 backend
+
+```bash
+kubectl port-forward -n lims-local svc/lims-lims-backend 8000:8000 &
+curl http://localhost:8000/healthz
+curl http://localhost:8000/readyz
+curl http://localhost:8000/metrics | head -20
+kill %1
+```
+
+`/readyz` 應該回 `{"status": "ready", "checks": {"database": "ok", "redis": "ok"}}`。
+
+### 7c. 從瀏覽器打整套 SPA + API
+
+```bash
+# kind-config.yaml 已經把 host:8080 → cluster:30080,但 Service 是 ClusterIP,
+# 所以直接 port-forward frontend Service:
+kubectl port-forward -n lims-local svc/lims-lims-frontend 8080:8080 &
+kubectl port-forward -n lims-local svc/lims-lims-backend 8000:8000 &
+```
+
+開瀏覽器 → `http://localhost:8080` → 應該看到登入畫面。
+帳號 `testuser` / 密碼 `Lims@2026!Init`(demo seed 自帶的)。
+
+### 7d. 測 admin 後台
+
+開 `http://localhost:8080/admin/` (超管 `admin` / `AdminLocal_2026!Init` — 在 envs/local.yaml 的 `localSecrets.limsAdminPassword`)。
+
+**注意:** demo seed 的 `users.0002_create_default_admin` migration 仍然用環境變數 `LIMS_ADMIN_PASSWORD` 來建 admin 密碼。在 kind 裡這個值來自 `local-secret.yaml`(`AdminLocal_2026!Init`)。
+
+---
+
+## 8. 拆掉
+
+```bash
+make kind-down
+```
+
+整組 cluster 連同 pods、volume 全部清掉。host 不留任何狀態。
+
+---
+
+## 出問題的時候看哪裡
+
+| 症狀 | 看這裡 |
+|---|---|
+| backend pod CrashLoop | `kubectl logs -n lims-local <pod> -c app` |
+| migrate Job 失敗 | `kubectl logs -n lims-local job/lims-lims-migrate -c migrate` |
+| readiness probe 一直失敗 | `kubectl describe pod -n lims-local <pod>` 看 events |
+| MySQL 起不來 | `kubectl describe pod -n lims-local lims-mysql-0` 看是不是 disk 不夠 |
+| `image not found` | `make kind-load` 沒跑;`docker images | grep lims` 確認 host 有 image,再 load 一次 |
+| Helm 安裝住了 | `kubectl get pods -n lims-local`,看誰沒 Ready;事件可以 `kubectl get events -n lims-local --sort-by=.lastTimestamp` |
+
+整個 kind 環境幾乎不會壞 — 出事就 `make kind-down && make kind-up` 重跑全套就好。
