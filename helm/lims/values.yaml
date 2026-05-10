@@ -41,6 +41,9 @@ frontend:
   replicas: 1
   image:
     repository: frontend
+  service:
+    type: ClusterIP        # NodePort only used in local kind validation
+    nodePort: ""           # only honoured when type=NodePort
   resources:
     requests: { cpu: 50m, memory: 64Mi }
     limits:   { cpu: 200m, memory: 128Mi }

@@ -9,10 +9,11 @@ nodes:
         nodeRegistration:
           kubeletExtraArgs:
             node-labels: "ingress-ready=true"
-    # Intentionally NO extraPortMappings: the chart uses ClusterIP
-    # Services (no NodePort), so kind's NodePort handler on the host
-    # would just reset connections. Use `kubectl port-forward` instead:
-    #
-    #   kubectl port-forward -n lims-local svc/lims-lims-frontend 18080:8080
-    #
-    # then open http://localhost:18080/.
+    extraPortMappings:
+      # Map host :8080 → node :30080. helm/lims/envs/local.yaml pins
+      # the frontend Service to type=NodePort + nodePort=30080, so
+      # http://localhost:8080/ goes straight to the SPA — no
+      # `kubectl port-forward` needed in local validation.
+      - containerPort: 30080
+        hostPort: 8080
+        protocol: TCP

@@ -177,17 +177,19 @@ kill %1
 
 ### 7c. 從瀏覽器打整套 SPA + API
 
-```bash
-# 只需要一個 port-forward。nginx 自己代理 /api/*、/admin/*、/static/*
-# 到 backend service,所以瀏覽器只要打 frontend 的 port 就好。
-kubectl port-forward -n lims-local svc/lims-lims-frontend 18080:8080
-```
+直接開瀏覽器 → **http://localhost:8080/** → 登入畫面。**不用 port-forward。**
 
-> ⚠️ **一定要用 18080 不要用 8080。** host port 8080 容易撞到別的 listener
-> (殘留的 docker compose、kind 自己的 NodePort handler 都會 listen 0.0.0.0:8080),
-> 結果連線被 reset。任何 ≥ 10000 的閒置 port 都行。
+`scripts/kind-config.yaml` 把 host `:8080` 對到 node `:30080`,而
+`helm/lims/envs/local.yaml` 把 frontend Service 設成 `type: NodePort`
++ `nodePort: 30080`,所以 host 8080 的 traffic 會經過 kind 的 port
+mapping → NodePort → frontend nginx → 自己 proxy `/api/*` 到 backend。
 
-開瀏覽器 → **http://localhost:18080/** → 登入畫面。
+> 如果 8080 上 reset:確認沒有殘留的 docker-compose 還在跑
+> (`docker ps | grep 8080`),或臨時用 `port-forward` 換個 port:
+> ```bash
+> kubectl port-forward -n lims-local svc/lims-lims-frontend 18080:8080
+> # 開 http://localhost:18080/
+> ```
 
 | Username | Password | Role | 可以做什麼 |
 |---|---|---|---|
