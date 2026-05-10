@@ -32,6 +32,11 @@ spec:
           volumeMounts:
             - { name: cache, mountPath: /var/cache/nginx }
             - { name: pidfile, mountPath: /var/run/nginx }
+            # nginx writes its pid to /tmp/nginx.pid (set in the
+            # Dockerfile.k8s sed). With readOnlyRootFilesystem we need
+            # an emptyDir mounted there.
+            - { name: tmp, mountPath: /tmp }
       volumes:
         - { name: cache, emptyDir: {} }
         - { name: pidfile, emptyDir: {} }
+        - { name: tmp, emptyDir: {} }

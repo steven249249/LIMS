@@ -106,6 +106,12 @@ localSecrets:
   dbPassword: kind-mysql-root
   limsAdminPassword: AdminLocal_2026!Init
 
+# ── NetworkPolicy ────────────────────────────────────────────────────────
+# default-deny + scoped allow rules. In kind / local, talking to an
+# in-cluster MySQL on :3306 isn't covered by the policy, so disable it.
+networkPolicy:
+  enabled: true
+
 # ── Observability ─────────────────────────────────────────────────────────
 metrics:
   podMonitor:

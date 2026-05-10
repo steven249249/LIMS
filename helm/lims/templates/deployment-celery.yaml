@@ -14,7 +14,7 @@ spec:
       annotations:
         checksum/config: {{ include "lims.configHash" . }}
     spec:
-      serviceAccountName: {{ include "lims.fullname" . }}
+      serviceAccountName: {{ include "lims.serviceAccountName" . }}
       terminationGracePeriodSeconds: 60                  # let in-flight tasks finish
       securityContext: {{- include "lims.podSecurityContext" . | nindent 8 }}
       containers:
@@ -24,9 +24,7 @@ spec:
           command: ["celery", "-A", "backend", "worker", "-l", "info", "--max-tasks-per-child=200"]
           envFrom:
             - configMapRef: { name: {{ include "lims.fullname" . }}-config }
-            {{- if .Values.externalSecrets.enabled }}
             - secretRef:    { name: {{ include "lims.fullname" . }}-secrets }
-            {{- end }}
           resources: {{- toYaml .Values.celery.resources | nindent 12 }}
           livenessProbe:
             exec:

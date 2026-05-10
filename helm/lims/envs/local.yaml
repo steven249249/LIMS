@@ -34,6 +34,8 @@ config:
   DJANGO_LOG_LEVEL: DEBUG
 externalSecrets:
   enabled: false                   # no GCP / ESO in kind; use a plain Secret
+networkPolicy:
+  enabled: false                   # default-deny would block direct :3306 to in-cluster MySQL
 serviceAccount:
   create: false                    # plain default SA, no Workload Identity
 metrics:

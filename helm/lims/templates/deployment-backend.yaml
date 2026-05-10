@@ -19,7 +19,7 @@ spec:
         # Roll the Deployment whenever the rendered ConfigMap changes.
         checksum/config: {{ include "lims.configHash" . }}
     spec:
-      serviceAccountName: {{ include "lims.fullname" . }}
+      serviceAccountName: {{ include "lims.serviceAccountName" . }}
       terminationGracePeriodSeconds: 30
       securityContext: {{- include "lims.podSecurityContext" . | nindent 8 }}
       containers:
@@ -30,9 +30,10 @@ spec:
             - { name: http, containerPort: 8000 }
           envFrom:
             - configMapRef: { name: {{ include "lims.fullname" . }}-config }
-            {{- if .Values.externalSecrets.enabled }}
             - secretRef:    { name: {{ include "lims.fullname" . }}-secrets }
-            {{- end }}
+          # No `env:` overrides — DB_HOST / DB_PORT / etc. all come from
+          # the ConfigMap, which already branches on cloudSql.enabled
+          # (Auth Proxy sidecar → 127.0.0.1, in-cluster MySQL → service name).
           resources: {{- toYaml .Values.backend.resources | nindent 12 }}
           startupProbe:
             httpGet: { path: /healthz, port: http }

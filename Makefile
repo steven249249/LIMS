@@ -28,17 +28,19 @@ kind-down:
 	kind delete cluster --name $(CLUSTER)
 
 kind-deps:
-	@command -v helm >/dev/null || { echo "helm not found — install: https://helm.sh/docs/intro/install/"; exit 1; }
-	helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
-	helm repo update bitnami
-	kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
-	helm upgrade --install lims-mysql bitnami/mysql -n $(NAMESPACE) \
-	  --set auth.rootPassword=kind-mysql-root \
-	  --set auth.database=lab_booking \
-	  --set primary.persistence.size=1Gi
-	helm upgrade --install lims-redis bitnami/redis -n $(NAMESPACE) \
-	  --set auth.enabled=false \
-	  --set master.persistence.size=1Gi
+	# Plain mysql:8.0 + redis:7-alpine StatefulSet/Deployment. Avoids the
+	# bitnami helm chart because their public Docker Hub mirror was
+	# discontinued and the secured images require a paid login. For local
+	# kind validation a self-contained manifest is enough.
+	kubectl apply -f scripts/kind-deps.yaml
+	kubectl wait --for=condition=Ready pod -l app=lims-mysql -n $(NAMESPACE) --timeout=180s
+	kubectl wait --for=condition=Ready pod -l app=lims-redis -n $(NAMESPACE) --timeout=60s
+
+kind-deps-down:
+	# Tear down a previous bitnami install (if any) + the new manifests.
+	helm uninstall lims-mysql -n $(NAMESPACE) 2>/dev/null || true
+	helm uninstall lims-redis -n $(NAMESPACE) 2>/dev/null || true
+	kubectl delete -f scripts/kind-deps.yaml --ignore-not-found
 
 kind-build:
 	docker build -f backend/Dockerfile.k8s -t $(BACKEND_IMG) backend/

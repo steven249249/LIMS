@@ -23,8 +23,13 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 lims.environment: {{ .Values.env }}
 {{- end -}}
 
+{{/*
+componentLabels expects { root: <chart context>, component: <name> } so it
+can call lims.labels with the real chart context (which has .Chart, .Release,
+.Values) instead of the wrapping dict.
+*/}}
 {{- define "lims.componentLabels" -}}
-{{ include "lims.labels" . }}
+{{ include "lims.labels" .root }}
 app.kubernetes.io/component: {{ .component }}
 {{- end -}}
 
@@ -72,4 +77,17 @@ runAsNonRoot: true
 runAsUser: 10001
 capabilities:
   drop: ["ALL"]
+{{- end -}}
+
+{{/*
+Pick the right ServiceAccount name. When .Values.serviceAccount.create is
+false (e.g. local kind validation), pods fall back to the namespace's
+"default" SA so they can still be admitted.
+*/}}
+{{- define "lims.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{ include "lims.fullname" . }}
+{{- else -}}
+default
+{{- end -}}
 {{- end -}}

@@ -18,7 +18,7 @@ spec:
       labels: {{- include "lims.componentLabels" (dict "root" . "component" "migrate") | nindent 8 }}
     spec:
       restartPolicy: Never
-      serviceAccountName: {{ include "lims.fullname" . }}
+      serviceAccountName: {{ include "lims.serviceAccountName" . }}
       securityContext: {{- include "lims.podSecurityContext" . | nindent 8 }}
       containers:
         - name: migrate
@@ -26,9 +26,9 @@ spec:
           command: ["python", "manage.py", "migrate", "--noinput"]
           envFrom:
             - configMapRef: { name: {{ include "lims.fullname" . }}-config }
-            {{- if .Values.externalSecrets.enabled }}
+            # The Secret is created either by ExternalSecret (prod) or
+            # by templates/local-secret.yaml (kind) — same name either way.
             - secretRef:    { name: {{ include "lims.fullname" . }}-secrets }
-            {{- end }}
           resources: {{- toYaml .Values.migrate.resources | nindent 12 }}
           securityContext: {{- include "lims.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
