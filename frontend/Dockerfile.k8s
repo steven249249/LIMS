@@ -24,11 +24,17 @@ RUN addgroup -g 10001 app && adduser -u 10001 -G app -D -H app
 COPY nginx.k8s.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# nginx writes /var/cache/nginx and /var/run; make sure the non-root user
-# can do that with a read-only root filesystem mounted.
-RUN chown -R app:app /var/cache/nginx /var/log/nginx /usr/share/nginx/html && \
-    mkdir -p /var/run/nginx && chown app:app /var/run/nginx && \
-    sed -i 's|/var/run/nginx.pid|/var/run/nginx/nginx.pid|' /etc/nginx/nginx.conf
+# nginx writes pid + cache files at runtime. With readOnlyRootFilesystem
+# the pod mounts an emptyDir at /var/cache/nginx; we point the pid at
+# /tmp (also emptyDir-mountable) and drop the `user nginx` directive
+# since the image already runs as UID 10001.
+RUN sed -i \
+        -e 's|^pid .*|pid /tmp/nginx.pid;|' \
+        -e 's|^user .*|# user directive removed — running as UID 10001|' \
+        /etc/nginx/nginx.conf && \
+    chown -R app:app /var/cache/nginx /var/log/nginx /usr/share/nginx/html && \
+    # /docker-entrypoint.d scripts that try to mutate config aren't needed; remove them.
+    rm -rf /docker-entrypoint.d/*
 
 USER 10001
 EXPOSE 8080
