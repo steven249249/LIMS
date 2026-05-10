@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars and fill in.
+
+project_id   = "REPLACE-ME"           # gcloud projects describe <id>
+github_org   = "REPLACE-ME"           # e.g. asddzxcc1856
+github_repo  = "lims"                 # the application repo name
+
+# Operator workstation IP(s). Only these can reach the GKE API server.
+authorized_networks = {
+  "operator-home" = "REPLACE-ME/32"
+}

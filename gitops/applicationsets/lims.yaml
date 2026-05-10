@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: lims
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - { env: dev,     namespace: lims-dev,     autoSync: true,  selfHeal: true,  prune: true  }
+          - { env: staging, namespace: lims-staging, autoSync: true,  selfHeal: true,  prune: true  }
+          - { env: prod,    namespace: lims-prod,    autoSync: false, selfHeal: false, prune: false }
+  template:
+    metadata:
+      name: 'lims-{{.env}}'
+      finalizers: [resources-finalizer.argocd.argoproj.io]
+    spec:
+      project: lims
+      sources:
+        # 1. The chart — lives in the application repo so PRs review the
+        #    template and the code together.
+        - repoURL: https://github.com/REPLACE-ME/lims.git
+          targetRevision: main
+          path: helm/lims
+          helm:
+            valueFiles:
+              - values.yaml
+              - 'envs/{{.env}}.yaml'
+              - '$values/gitops/envs/{{.env}}/values.yaml'
+        # 2. CI-bumped overrides — image.tag pinned per env.
+        - repoURL: https://github.com/REPLACE-ME/lims.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.namespace}}'
+      syncPolicy:
+        automated:
+          prune: '{{.prune}}'
+          selfHeal: '{{.selfHeal}}'
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - ApplyOutOfSyncOnly=true
+          - ServerSideApply=true
+        retry:
+          limit: 3
+          backoff: { duration: 10s, factor: 2, maxDuration: 3m }
+      revisionHistoryLimit: 10
+      ignoreDifferences:
+        # Google sets `.status` on ManagedCertificate — Argo would otherwise
+        # flag the resource as drifted forever.
+        - group: networking.gke.io
+          kind: ManagedCertificate
+          jsonPointers: [/status]

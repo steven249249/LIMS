@@ -1,0 +1,163 @@
+# Observability stack — kube-prom-stack, Loki, Tempo, OTel Collector,
+# Grafana. Deployed via Argo CD as four separate Applications under one
+# project so versions / values can be pinned independently.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: observability
+  namespace: argocd
+spec:
+  description: In-cluster observability stack (Prom + Loki + Tempo + OTel + Grafana)
+  sourceRepos:
+    - https://prometheus-community.github.io/helm-charts
+    - https://grafana.github.io/helm-charts
+    - https://open-telemetry.github.io/opentelemetry-helm-charts
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: observability }
+  clusterResourceWhitelist:
+    - { group: '*', kind: '*' }
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: { name: kube-prometheus-stack, namespace: argocd }
+spec:
+  project: observability
+  destination: { server: https://kubernetes.default.svc, namespace: observability }
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 65.5.0
+    helm:
+      valuesObject:
+        prometheus:
+          prometheusSpec:
+            retention: 15d
+            retentionSize: 45GB
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: premium-rwo
+                  resources: { requests: { storage: 50Gi } }
+        alertmanager:
+          alertmanagerSpec:
+            storage:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: standard-rwo
+                  resources: { requests: { storage: 5Gi } }
+        grafana:
+          adminPassword: REPLACE-ME-rotate-immediately
+          defaultDashboardsEnabled: true
+          persistence: { enabled: true, size: 5Gi }
+          additionalDataSources:
+            - { name: Loki, type: loki, url: 'http://loki-gateway.observability.svc:80' }
+            - { name: Tempo, type: tempo, url: 'http://tempo.observability.svc:3200' }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: { name: loki, namespace: argocd }
+spec:
+  project: observability
+  destination: { server: https://kubernetes.default.svc, namespace: observability }
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: loki
+    targetRevision: 6.16.0
+    helm:
+      valuesObject:
+        deploymentMode: SingleBinary
+        loki:
+          auth_enabled: false
+          storage:
+            type: gcs
+            bucketNames:
+              chunks: REPLACE-ME-loki-chunks
+              ruler:  REPLACE-ME-loki-ruler
+              admin:  REPLACE-ME-loki-admin
+          schemaConfig:
+            configs:
+              - from: 2026-01-01
+                store: tsdb
+                object_store: gcs
+                schema: v13
+                index: { prefix: loki_index_, period: 24h }
+        gateway: { enabled: true }
+        singleBinary: { replicas: 1 }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: { name: tempo, namespace: argocd }
+spec:
+  project: observability
+  destination: { server: https://kubernetes.default.svc, namespace: observability }
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    targetRevision: 1.18.0
+    helm:
+      valuesObject:
+        tempo:
+          storage:
+            trace:
+              backend: gcs
+              gcs: { bucket_name: REPLACE-ME-tempo-traces }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: { name: opentelemetry-collector, namespace: argocd }
+spec:
+  project: observability
+  destination: { server: https://kubernetes.default.svc, namespace: observability }
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    targetRevision: 0.108.0
+    helm:
+      valuesObject:
+        mode: daemonset
+        image: { repository: otel/opentelemetry-collector-contrib }
+        config:
+          receivers:
+            otlp:
+              protocols:
+                grpc: { endpoint: 0.0.0.0:4317 }
+                http: { endpoint: 0.0.0.0:4318 }
+          processors:
+            batch: {}
+            memory_limiter: { check_interval: 1s, limit_mib: 512 }
+            resourcedetection: { detectors: [gcp, env, k8s] }
+            attributes/scrub:
+              actions:
+                - { key: http.user_agent, action: delete }
+                - { key: db.statement, action: hash }
+          exporters:
+            otlp/tempo:
+              endpoint: tempo.observability.svc:4317
+              tls: { insecure: true }
+            prometheusremotewrite/prom:
+              endpoint: http://kube-prometheus-stack-prometheus.observability.svc:9090/api/v1/write
+          service:
+            pipelines:
+              traces:
+                receivers: [otlp]
+                processors: [memory_limiter, resourcedetection, attributes/scrub, batch]
+                exporters: [otlp/tempo]
+              metrics:
+                receivers: [otlp]
+                processors: [memory_limiter, batch]
+                exporters: [prometheusremotewrite/prom]
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

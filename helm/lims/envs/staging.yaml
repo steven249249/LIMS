@@ -1,7 +1,7 @@
 # staging — production-like topology at half the size.
 env: staging
 ingress:
-  host: staging.lims.example.com
+  host: lims-staging.ddns.net
   staticIp: lims-staging-ingress-ip
 backend:
   replicas: 2
@@ -17,9 +17,9 @@ cloudSql:
 config:
   DJANGO_DEBUG: "False"
   DJANGO_PRODUCTION: "True"
-  DJANGO_ALLOWED_HOSTS: staging.lims.example.com
-  CORS_ALLOWED_ORIGINS: https://staging.lims.example.com
-  CSRF_TRUSTED_ORIGINS: https://staging.lims.example.com
+  DJANGO_ALLOWED_HOSTS: lims-staging.ddns.net
+  CORS_ALLOWED_ORIGINS: https://lims-staging.ddns.net
+  CSRF_TRUSTED_ORIGINS: https://lims-staging.ddns.net
   SEED_DEMO_DATA: "False"
   SENTRY_ENVIRONMENT: staging
 externalSecrets:

@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars.
+project_id = "REPLACE-ME"
+authorized_networks = {
+  "operator-home" = "REPLACE-ME/32"
+}

@@ -4,12 +4,18 @@ metadata:
   name: {{ include "lims.fullname" . }}-config
   labels: {{- include "lims.labels" . | nindent 4 }}
 data:
-  # Cloud SQL Auth Proxy listens on localhost; backend always talks to 127.0.0.1.
   DB_ENGINE: mysql
+  {{- if .Values.cloudSql.enabled }}
+  # Cloud SQL Auth Proxy sidecar listens on localhost.
   DB_HOST: "127.0.0.1"
   DB_PORT: "3306"
+  {{- else }}
+  # Direct connection (kind / in-cluster MySQL chart).
+  DB_HOST: {{ .Values.cloudSql.directHost | quote }}
+  DB_PORT: {{ .Values.cloudSql.directPort | quote }}
+  {{- end }}
   DB_NAME: {{ .Values.cloudSql.databaseName | quote }}
-  DB_USER: lims_app
+  DB_USER: {{ .Values.cloudSql.databaseUser | quote }}
   REDIS_URL: {{ .Values.redis.url | quote }}
   CELERY_BROKER_URL: {{ default .Values.redis.url .Values.redis.brokerUrl | quote }}
   GUNICORN_WORKERS: {{ .Values.backend.gunicornWorkers | quote }}

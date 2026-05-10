@@ -1,7 +1,10 @@
 # prod — full HPA, strict security, no auto-sync (Argo flag, not Helm).
+# DNS: lims.ddns.net A record points at the GCLB static IP reserved by
+# infra/envs/prod (output: ingress_ip). DDNS provider must allow updates
+# from a static IP; once the static IP is allocated, lock the A record.
 env: prod
 ingress:
-  host: lims.example.com
+  host: lims.ddns.net
   staticIp: lims-prod-ingress-ip
 backend:
   replicas: 3
@@ -22,9 +25,9 @@ cloudSql:
 config:
   DJANGO_DEBUG: "False"
   DJANGO_PRODUCTION: "True"
-  DJANGO_ALLOWED_HOSTS: lims.example.com
-  CORS_ALLOWED_ORIGINS: https://lims.example.com
-  CSRF_TRUSTED_ORIGINS: https://lims.example.com
+  DJANGO_ALLOWED_HOSTS: lims.ddns.net
+  CORS_ALLOWED_ORIGINS: https://lims.ddns.net
+  CSRF_TRUSTED_ORIGINS: https://lims.ddns.net
   SEED_DEMO_DATA: "False"
   SENTRY_ENVIRONMENT: prod
 externalSecrets:

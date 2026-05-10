@@ -1,0 +1,45 @@
+# local — kind cluster with in-cluster bitnami MySQL + Redis. Used by
+# `make kind-deploy` for the Step-2 validation of the migration plan.
+env: local
+ingress:
+  enabled: false                   # use port-forward, no LB / TLS in kind
+  host: localhost
+backend:
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+  hpa: { enabled: false, min: 1, max: 1, targetCPUUtilizationPercentage: 70 }
+  pdb: { minAvailable: 0 }
+  gunicornWorkers: 2
+frontend:
+  replicas: 1
+celery:
+  enabled: false
+cloudSql:
+  enabled: false                   # no proxy sidecar — talk straight to the in-cluster MySQL
+  databaseName: lab_booking
+  databaseUser: root               # bitnami chart's default
+  directHost: lims-mysql           # service name installed by `make kind-deps`
+  directPort: 3306
+redis:
+  url: redis://lims-redis-master:6379/0
+config:
+  DJANGO_DEBUG: "True"
+  DJANGO_PRODUCTION: "False"       # don't enforce HSTS / SSL redirect on http://localhost
+  DJANGO_ALLOWED_HOSTS: "*"
+  CORS_ALLOWED_ORIGINS: http://localhost:5173
+  CSRF_TRUSTED_ORIGINS: http://localhost:5173
+  SEED_DEMO_DATA: "True"
+  DJANGO_LOG_LEVEL: DEBUG
+externalSecrets:
+  enabled: false                   # no GCP / ESO in kind; use a plain Secret
+serviceAccount:
+  create: false                    # plain default SA, no Workload Identity
+metrics:
+  podMonitor:
+    enabled: false                 # kube-prom-stack isn't installed by default in kind
+image:
+  registry: lims                   # locally-loaded with `kind load docker-image`
+  pullPolicy: Never                # the image is preloaded; never pull
+  tag: local

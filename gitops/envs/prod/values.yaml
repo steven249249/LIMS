@@ -1,0 +1,4 @@
+# Prod tag is bumped by a manual PR. After merge, sync still requires a
+# human in the Argo CD UI (`autoSync: false` in applicationsets/lims.yaml).
+image:
+  tag: "REPLACE-ME-set-by-prod-promotion"

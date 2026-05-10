@@ -1,0 +1,4 @@
+# CI bumps `image.tag` here on every successful dev build.
+# Other env-specific overrides live in helm/lims/envs/dev.yaml.
+image:
+  tag: "REPLACE-ME-set-by-ci"

@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lims
+  namespace: argocd
+spec:
+  description: LIMS application — Helm-based deploys to lims-{dev,staging,prod}
+  sourceRepos:
+    # Application chart
+    - https://github.com/REPLACE-ME/lims.git
+    # GitOps manifests (this directory tree)
+    - https://github.com/REPLACE-ME/lims.git
+    # Upstream charts the observability stack pulls from
+    - https://prometheus-community.github.io/helm-charts
+    - https://grafana.github.io/helm-charts
+    - https://open-telemetry.github.io/opentelemetry-helm-charts
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: 'lims-*'
+    - server: https://kubernetes.default.svc
+      namespace: observability
+  clusterResourceWhitelist:
+    - { group: '', kind: Namespace }
+  namespaceResourceWhitelist:
+    - { group: '', kind: ConfigMap }
+    - { group: '', kind: Service }
+    - { group: '', kind: ServiceAccount }
+    - { group: '', kind: Secret }
+    - { group: 'apps', kind: Deployment }
+    - { group: 'apps', kind: StatefulSet }
+    - { group: 'apps', kind: DaemonSet }
+    - { group: 'batch', kind: Job }
+    - { group: 'batch', kind: CronJob }
+    - { group: 'autoscaling', kind: HorizontalPodAutoscaler }
+    - { group: 'policy', kind: PodDisruptionBudget }
+    - { group: 'networking.k8s.io', kind: Ingress }
+    - { group: 'networking.k8s.io', kind: NetworkPolicy }
+    - { group: 'networking.gke.io', kind: ManagedCertificate }
+    - { group: 'networking.gke.io', kind: FrontendConfig }
+    - { group: 'cloud.google.com', kind: BackendConfig }
+    - { group: 'external-secrets.io', kind: ExternalSecret }
+    - { group: 'monitoring.coreos.com', kind: PodMonitor }
+    - { group: 'monitoring.coreos.com', kind: ServiceMonitor }
+    - { group: 'monitoring.coreos.com', kind: PrometheusRule }
+  roles:
+    - name: read-only
+      description: View-only access for everyone in the lims-readers group
+      policies:
+        - p, proj:lims:read-only, applications, get, lims/*, allow
+      groups:
+        - REPLACE-ME:lims-readers
+    - name: deployer
+      description: Trigger sync (no destroy)
+      policies:
+        - p, proj:lims:deployer, applications, get,  lims/*, allow
+        - p, proj:lims:deployer, applications, sync, lims/*, allow
+      groups:
+        - REPLACE-ME:lims-deployers

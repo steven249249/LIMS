@@ -62,9 +62,15 @@ celery:
 
 # ── Backing services (managed) ────────────────────────────────────────────
 cloudSql:
+  # When true: Cloud SQL Auth Proxy sidecar; backend connects to 127.0.0.1.
+  # When false: backend connects directly to ``directHost:directPort``
+  # (used for kind / in-cluster MySQL chart during local validation).
   enabled: true
-  connectionName: REPLACE-ME:us-central1:lims-dev # Cloud SQL Auth Proxy target
+  connectionName: REPLACE-ME:us-central1:lims-dev
   databaseName: lab_booking
+  databaseUser: lims_app
+  directHost: lims-mysql                          # for cloudSql.enabled = false
+  directPort: 3306
 redis:
   url: redis://10.0.0.0:6379/0                    # Memorystore private IP
   brokerUrl: ""                                   # if blank, fall back to redis.url
@@ -90,6 +96,15 @@ externalSecrets:
     - DB_PASSWORD
     - LIMS_ADMIN_PASSWORD
     - SENTRY_DSN
+
+# Local-only fallback Secret. Used ONLY when externalSecrets.enabled is
+# false (i.e. kind / local validation). Never override these to real
+# values in a chart values file — production always goes through ESO +
+# Secret Manager.
+localSecrets:
+  djangoSecretKey: kind-only-not-secure-do-not-use
+  dbPassword: kind-mysql-root
+  limsAdminPassword: AdminLocal_2026!Init
 
 # ── Observability ─────────────────────────────────────────────────────────
 metrics:

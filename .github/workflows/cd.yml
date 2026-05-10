@@ -1,146 +1,169 @@
-name: CD (deploy to GCP)
+name: CD (build → push → bump GitOps tag)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Status: DRAFT — kept disabled until the target GCP project is provisioned.
+# Pipeline shape (GitOps, not direct kubectl):
 #
-# How to enable:
-#   1. Provision the target Cloud Run / GCE host and the Artifact Registry repo
-#      (region: asia-east1 by default).
-#   2. Create a GitHub OIDC service account in GCP and bind:
-#        - roles/run.admin
-#        - roles/artifactregistry.writer
-#        - roles/iam.serviceAccountUser
-#   3. Add these repository secrets:
-#        - GCP_WORKLOAD_IDENTITY_PROVIDER
-#        - GCP_SERVICE_ACCOUNT
-#        - GCP_PROJECT_ID
-#        - DJANGO_SECRET_KEY
-#        - LIMS_ADMIN_PASSWORD
-#   4. Change the workflow trigger below from `workflow_dispatch` to:
-#        on:
-#          push:
-#            branches: [main]
-#          workflow_dispatch:
-#   5. Remove the `if: ${{ false }}` guard on the `deploy` job.
+#   push to main → tests pass (ci.yml) → THIS workflow:
+#     1. build backend + frontend images, tagged with $(git rev-parse --short=12 HEAD)
+#     2. push images to Artifact Registry (immutable tags)
+#     3. trivy scan: fail on CRITICAL/HIGH
+#     4. bump `image.tag` in gitops/envs/dev/values.yaml
+#        (manual workflow_dispatch handles staging promotion;
+#         prod is a hand-written PR + manual Argo CD sync.)
 #
-# Until those steps complete, the workflow can still be inspected on GitHub
-# (Actions tab → CD (deploy to GCP)) but the deploy job is unreachable.
-# ─────────────────────────────────────────────────────────────────────────────
+# Repository variables / secrets expected:
+#   vars.GCP_PROJECT             — GCP project ID (REPLACE-ME after Terraform apply)
+#   vars.AR_REGION               — e.g. asia-east1
+#   vars.WIF_PROVIDER            — Terraform output `wif_provider_resource`
+#   vars.GITOPS_REPO             — owner/lims (or owner/lims-gitops if split)
+#   secrets.GITOPS_PAT           — repo-scoped PAT or GitHub App token with
+#                                  `contents: write` on the GitOps repo
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
-      confirm:
-        description: 'Type DEPLOY to confirm'
-        required: true
-        default: 'no'
+      image_tag:
+        description: 'Override image tag (defaults to short commit SHA)'
+        required: false
+        default: ''
+      promote_to_staging:
+        description: 'After build, also bump staging tag'
+        type: boolean
+        default: false
 
-env:
-  GCP_REGION: asia-east1
-  IMAGE_REPO: lims
-  BACKEND_IMAGE: lims-backend
-  FRONTEND_IMAGE: lims-frontend
+permissions:
+  contents: read
+  id-token: write   # for keyless auth to GCP
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────────────
-  # Build container images and push to Artifact Registry.
-  # Currently disabled with `if: false` so the job is parsed but never runs.
-  # ─────────────────────────────────────────────────────────────────────────
   build-and-push:
-    name: Build images
-    if: ${{ false }}            # Remove this line once GCP is ready.
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write             # Workload Identity Federation
+    outputs:
+      image_tag: ${{ steps.tag.outputs.value }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Reject unconfirmed manual runs
-        if: ${{ github.event.inputs.confirm != 'DEPLOY' }}
+      - id: tag
         run: |
-          echo "::error::Manual run requires the 'confirm' input set to DEPLOY"
-          exit 1
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "value=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Authenticate to Google Cloud
+      - id: gcp_auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ci-builder@${{ vars.GCP_PROJECT }}.iam.gserviceaccount.com
 
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ vars.AR_REGION }}-docker.pkg.dev --quiet
 
-      - name: Build backend image
+      - name: Build + push backend
+        env:
+          REG: ${{ vars.AR_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/lims
+          TAG: ${{ steps.tag.outputs.value }}
         run: |
-          docker build \
-            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_REPO }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
-            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_REPO }}/${{ env.BACKEND_IMAGE }}:latest \
-            ./backend
+          docker buildx build \
+            --platform linux/amd64 \
+            -f backend/Dockerfile.k8s \
+            -t "$REG/backend:$TAG" \
+            --push \
+            backend/
 
-      - name: Build frontend image
+      - name: Build + push frontend
+        env:
+          REG: ${{ vars.AR_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/lims
+          TAG: ${{ steps.tag.outputs.value }}
         run: |
-          docker build \
-            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_REPO }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
-            -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_REPO }}/${{ env.FRONTEND_IMAGE }}:latest \
-            ./frontend
+          docker buildx build \
+            --platform linux/amd64 \
+            -f frontend/Dockerfile.k8s \
+            --build-arg VITE_API_BASE=/api \
+            -t "$REG/frontend:$TAG" \
+            --push \
+            frontend/
 
-      - name: Push images
-        run: |
-          docker push --all-tags ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_REPO }}/${{ env.BACKEND_IMAGE }}
-          docker push --all-tags ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_REPO }}/${{ env.FRONTEND_IMAGE }}
+      - name: Trivy scan (backend)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ vars.AR_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/lims/backend:${{ steps.tag.outputs.value }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # Roll out to Cloud Run. Disabled until target environment is ready.
-  # ─────────────────────────────────────────────────────────────────────────
-  deploy:
-    name: Deploy to Cloud Run
+      - name: Trivy scan (frontend)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ vars.AR_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/lims/frontend:${{ steps.tag.outputs.value }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+  bump-dev-tag:
     needs: build-and-push
-    if: ${{ false }}            # Remove this line once GCP is ready.
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    environment: production
+    steps:
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_PAT }}
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Bump dev image tag
+        env:
+          TAG: ${{ needs.build-and-push.outputs.image_tag }}
+        run: |
+          # Path assumes monorepo layout (gitops/ inside the app repo).
+          # If you split GitOps into a separate repo, drop the `gitops/` prefix.
+          yq -i '.image.tag = strenv(TAG)' gitops/envs/dev/values.yaml
+          git config user.name  'lims-ci'
+          git config user.email 'ci@lims.local'
+          git add gitops/envs/dev/values.yaml
+          if git diff --cached --quiet; then
+            echo "no change — image tag already at $TAG"
+            exit 0
+          fi
+          git commit -m "dev: bump image tag to $TAG"
+          git push
+
+  promote-to-staging:
+    needs: bump-dev-tag
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.promote_to_staging }}
+    runs-on: ubuntu-latest
+    environment: staging         # GitHub Environment = manual approval gate
     steps:
       - uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          repository: ${{ vars.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_PAT }}
 
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Deploy backend (Cloud Run)
+      - name: Install yq
         run: |
-          gcloud run deploy lims-backend \
-            --image=${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_REPO }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
-            --region=${{ env.GCP_REGION }} \
-            --platform=managed \
-            --allow-unauthenticated \
-            --port=8000 \
-            --set-env-vars=DJANGO_PRODUCTION=True,DJANGO_DEBUG=False \
-            --set-secrets=DJANGO_SECRET_KEY=django-secret-key:latest,LIMS_ADMIN_PASSWORD=lims-admin-password:latest
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
 
-      - name: Deploy frontend (Cloud Run)
+      - name: Promote dev tag to staging
         run: |
-          gcloud run deploy lims-frontend \
-            --image=${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_REPO }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
-            --region=${{ env.GCP_REGION }} \
-            --platform=managed \
-            --allow-unauthenticated \
-            --port=80
-
-      - name: Run post-deploy smoke check
-        run: |
-          BACKEND_URL=$(gcloud run services describe lims-backend --region=${{ env.GCP_REGION }} --format='value(status.url)')
-          curl -fsS -o /dev/null "$BACKEND_URL/api/users/login/" -X POST \
-            -H "Content-Type: application/json" -d '{}' || \
-            { echo "::error::Smoke check failed: backend not responding"; exit 1; }
-          echo "::notice::Deployment OK at $BACKEND_URL"
+          DEV_TAG=$(yq '.image.tag' gitops/envs/dev/values.yaml)
+          yq -i ".image.tag = \"$DEV_TAG\"" gitops/envs/staging/values.yaml
+          git config user.name  'lims-ci'
+          git config user.email 'ci@lims.local'
+          git add gitops/envs/staging/values.yaml
+          git diff --cached --quiet || \
+            (git commit -m "staging: promote $DEV_TAG" && git push)

@@ -1,7 +1,12 @@
 # dev — minimal resources, demo data on, autosync.
+# DNS: needs its own DDNS subdomain. Easiest path: register a second
+# free DDNS hostname (e.g. lims-dev.ddns.net) at no-ip / dynu /
+# whichever provider hosts lims.ddns.net, point it at the dev cluster's
+# Ingress static IP. If you only have one hostname for now, skip the
+# dev env and deploy directly to prod or to staging.
 env: dev
 ingress:
-  host: dev.lims.example.com
+  host: lims-dev.ddns.net
   staticIp: lims-dev-ingress-ip
 backend:
   replicas: 1
@@ -24,9 +29,9 @@ cloudSql:
 config:
   DJANGO_DEBUG: "False"
   DJANGO_PRODUCTION: "True"
-  DJANGO_ALLOWED_HOSTS: dev.lims.example.com
-  CORS_ALLOWED_ORIGINS: https://dev.lims.example.com
-  CSRF_TRUSTED_ORIGINS: https://dev.lims.example.com
+  DJANGO_ALLOWED_HOSTS: lims-dev.ddns.net
+  CORS_ALLOWED_ORIGINS: https://lims-dev.ddns.net
+  CSRF_TRUSTED_ORIGINS: https://lims-dev.ddns.net
   SEED_DEMO_DATA: "True"            # dev clusters get the demo accounts/lots
   DJANGO_LOG_LEVEL: DEBUG
   SENTRY_ENVIRONMENT: dev

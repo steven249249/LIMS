@@ -1,0 +1,5 @@
+# Staging tag is bumped by a manual promotion workflow once a dev tag
+# has soaked through smoke tests. The CI workflow pushes a PR for review
+# rather than committing directly.
+image:
+  tag: "REPLACE-ME-set-by-promotion"
