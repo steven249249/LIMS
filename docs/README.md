@@ -11,6 +11,7 @@
 | 3 | [03-ACCOUNTS-AND-CREDENTIALS.md](03-ACCOUNTS-AND-CREDENTIALS.md) | 系統有哪些帳號、誰用什麼、初始密碼怎麼來、怎麼換 |
 | 4 | [04-OPERATIONS-MANUAL.md](04-OPERATIONS-MANUAL.md) | 跑起來之後的日常:部署、rollback、查 log、改設定、災難復原 |
 | 5 | [05-POST-SETUP-NOTES.md](05-POST-SETUP-NOTES.md) | 上線後 24 小時 / 1 週內必做的硬化動作 + 常見雷 |
+| 6 | [06-ARGO-CD-ON-KIND.md](06-ARGO-CD-ON-KIND.md) | 在本機 kind 演練 Argo CD GitOps flow,丟 GCP 前先看過 |
 
 ## 快速 navigation
 
