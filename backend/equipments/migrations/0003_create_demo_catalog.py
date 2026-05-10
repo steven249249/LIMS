@@ -137,6 +137,12 @@ EXPERIMENTS = [
 
 
 def create_demo_catalog(apps, schema_editor):
+    import os
+    # Gated by SEED_DEMO_DATA so production clusters don't auto-create demo
+    # equipment + experiments. Set the env var to opt-in for fresh dev DBs.
+    if os.environ.get('SEED_DEMO_DATA', 'True').lower() not in ('true', '1', 'yes'):
+        return
+
     EquipmentType = apps.get_model('equipments', 'EquipmentType')
     Equipment = apps.get_model('equipments', 'Equipment')
     Experiment = apps.get_model('equipments', 'Experiment')

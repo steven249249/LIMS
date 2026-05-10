@@ -1,0 +1,111 @@
+# Default values — every key can be overridden in envs/<env>/values.yaml.
+# This file holds the conservative production-leaning defaults; per-env
+# values diverge minimally from here.
+
+env: dev                                          # dev | staging | prod
+nameOverride: lims
+fullnameOverride: ""
+
+image:
+  registry: us-central1-docker.pkg.dev/REPLACE-ME/lims
+  pullPolicy: IfNotPresent
+  tag: ""                                         # CI bumps this in lims-gitops
+
+# ── Ingress / TLS ─────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: gce
+  host: lims.example.com
+  staticIp: ""                                    # name of a reserved global static IP
+  managedCertificate: true                        # use GKE ManagedCertificate
+
+# ── Backend Deployment ────────────────────────────────────────────────────
+backend:
+  replicas: 2
+  image:
+    repository: backend
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits:   { cpu: "1",   memory: 1Gi   }
+  hpa:
+    enabled: true
+    min: 2
+    max: 6
+    targetCPUUtilizationPercentage: 70
+  pdb:
+    minAvailable: 1
+  gunicornWorkers: 4
+
+# ── Frontend Deployment ───────────────────────────────────────────────────
+frontend:
+  replicas: 1
+  image:
+    repository: frontend
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 128Mi }
+  hpa:
+    enabled: false
+    min: 1
+    max: 3
+    targetCPUUtilizationPercentage: 70
+
+# ── Celery Worker Deployment ──────────────────────────────────────────────
+celery:
+  enabled: false                                  # no @shared_task yet; flip on later
+  replicas: 1
+  image:
+    repository: backend                            # same image as the API
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+# ── Backing services (managed) ────────────────────────────────────────────
+cloudSql:
+  enabled: true
+  connectionName: REPLACE-ME:us-central1:lims-dev # Cloud SQL Auth Proxy target
+  databaseName: lab_booking
+redis:
+  url: redis://10.0.0.0:6379/0                    # Memorystore private IP
+  brokerUrl: ""                                   # if blank, fall back to redis.url
+
+# ── Application config (rendered into a ConfigMap) ────────────────────────
+config:
+  DJANGO_DEBUG: "False"
+  DJANGO_PRODUCTION: "True"
+  DJANGO_ALLOWED_HOSTS: lims.example.com
+  CORS_ALLOWED_ORIGINS: https://lims.example.com
+  CSRF_TRUSTED_ORIGINS: https://lims.example.com
+  SEED_DEMO_DATA: "False"
+  DJANGO_LOG_LEVEL: INFO
+  SENTRY_ENVIRONMENT: dev
+
+# ── Secrets (synced via External Secrets Operator) ────────────────────────
+externalSecrets:
+  enabled: true
+  storeName: gcpsm                                # ClusterSecretStore name
+  prefix: lims-dev                                # secrets in Secret Manager named <prefix>-*
+  keys:
+    - DJANGO_SECRET_KEY
+    - DB_PASSWORD
+    - LIMS_ADMIN_PASSWORD
+    - SENTRY_DSN
+
+# ── Observability ─────────────────────────────────────────────────────────
+metrics:
+  podMonitor:
+    enabled: true
+    interval: 30s
+
+# ── Migration Job (Argo CD PreSync hook) ──────────────────────────────────
+migrate:
+  enabled: true
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+# ── ServiceAccount + Workload Identity ────────────────────────────────────
+serviceAccount:
+  create: true
+  # GCP Service Account email; binds via Workload Identity to the K8s SA.
+  gsaEmail: lims-dev-runtime@REPLACE-ME.iam.gserviceaccount.com

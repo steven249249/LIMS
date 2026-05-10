@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lims.fullname" . }}-frontend
+  labels: {{- include "lims.componentLabels" (dict "root" . "component" "frontend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: {{- include "lims.componentSelector" (dict "root" . "component" "frontend") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "lims.componentLabels" (dict "root" . "component" "frontend") | nindent 8 }}
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext: {{- include "lims.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: nginx
+          image: {{ include "lims.image.frontend" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports: [{ name: http, containerPort: 8080 }]
+          resources: {{- toYaml .Values.frontend.resources | nindent 12 }}
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 30
+          securityContext: {{- include "lims.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - { name: cache, mountPath: /var/cache/nginx }
+            - { name: pidfile, mountPath: /var/run/nginx }
+      volumes:
+        - { name: cache, emptyDir: {} }
+        - { name: pidfile, emptyDir: {} }

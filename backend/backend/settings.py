@@ -43,6 +43,15 @@ if PRODUCTION and ALLOWED_HOSTS == ['*']:
         'DJANGO_PRODUCTION=True (wildcard "*" is rejected).'
     )
 
+# CSRF_TRUSTED_ORIGINS is required by Django 4+ when the SPA is on a different
+# scheme/host from the backend (typical: SPA on https://lims.example.com, API
+# on the same host but behind a load balancer that terminates TLS).
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if o.strip()
+]
+
 # ---------------------------------------------------------------------------
 # Application definition
 # ---------------------------------------------------------------------------
@@ -56,6 +65,7 @@ INSTALLED_APPS = [
     # Third-party
     'rest_framework',
     'corsheaders',
+    'django_prometheus',
     # Local apps
     'users',
     'orders',
@@ -66,7 +76,13 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # Prometheus middleware MUST sandwich every other one to time the full
+    # request — "Before" first, "After" last.
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # WhiteNoise serves static files in K8s where there is no separate static
+    # web server. Must come immediately after SecurityMiddleware.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'utils.request_id.RequestIDMiddleware',          # Trace correlation – first thing
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',          # CORS – before CommonMiddleware
@@ -76,6 +92,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'monitoring.middleware.ActivityLogMiddleware',   # Last – capture authenticated user
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -204,9 +221,25 @@ USE_I18N = True
 USE_TZ = True
 
 # ---------------------------------------------------------------------------
-# Static files
+# Static files — served by WhiteNoise in production (K8s has no static web
+# server). ``collectstatic`` runs at image-build time so STATIC_ROOT is
+# populated before the pod starts.
 # ---------------------------------------------------------------------------
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Compressed + cache-busted filenames in production. Falls back to plain
+# WhiteNoise in dev/tests so reloads stay snappy.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': (
+            'whitenoise.storage.CompressedManifestStaticFilesStorage'
+            if PRODUCTION
+            else 'whitenoise.storage.CompressedStaticFilesStorage'
+        ),
+    },
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -228,25 +261,35 @@ if PRODUCTION:
     SECURE_HSTS_PRELOAD = True
 
 # ---------------------------------------------------------------------------
-# Structured logging
+# Structured logging — JSON in production (so Loki/Cloud Logging can parse
+# fields without regex). Plain text in dev for human readability.
 # ---------------------------------------------------------------------------
+_LOG_FORMAT_JSON = (
+    '%(asctime)s %(levelname)s %(name)s %(message)s '
+    '%(request_id)s %(trace_id)s %(span_id)s'
+)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '[{asctime}] {levelname} {name} req={request_id}: {message}',
-            'style': '{',
-        },
         'simple': {
             'format': '[{asctime}] {levelname} {name}: {message}',
             'style': '{',
         },
+        'json': {
+            '()': 'pythonjsonlogger.json.JsonFormatter',
+            'format': _LOG_FORMAT_JSON,
+        },
+    },
+    'filters': {
+        'correlation': {'()': 'utils.logging_filters.CorrelationFilter'},
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'json' if PRODUCTION else 'simple',
+            'filters': ['correlation'],
         },
     },
     'loggers': {

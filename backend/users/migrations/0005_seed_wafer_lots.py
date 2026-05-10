@@ -20,6 +20,11 @@ DEMO_LOTS = [
 
 
 def seed(apps, schema_editor):
+    import os
+    # Gated by the same SEED_DEMO_DATA env var as the other demo migrations.
+    if os.environ.get('SEED_DEMO_DATA', 'True').lower() not in ('true', '1', 'yes'):
+        return
+
     FAB = apps.get_model('users', 'FAB')
     WaferLot = apps.get_model('users', 'WaferLot')
 

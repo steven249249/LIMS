@@ -1,0 +1,70 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lims.fullname" . }}-default-deny
+  labels: {{- include "lims.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Allow LB → frontend / backend (GKE LB health check + traffic IP ranges).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lims.fullname" . }}-allow-lb
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/component, operator: In, values: [backend, frontend] }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - ipBlock: { cidr: 130.211.0.0/22 }
+        - ipBlock: { cidr: 35.191.0.0/16 }
+      ports:
+        - { port: 8000, protocol: TCP }
+        - { port: 8080, protocol: TCP }
+---
+# Allow Prometheus (in observability ns) to scrape backend /metrics.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lims.fullname" . }}-allow-prom
+spec:
+  podSelector:
+    matchLabels: {{- include "lims.componentSelector" (dict "root" . "component" "backend") | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports: [{ port: 8000, protocol: TCP }]
+---
+# Egress: kube-dns, Cloud SQL Proxy is sidecar (same pod, no policy needed),
+# Memorystore, Google APIs (Secret Manager, etc.).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lims.fullname" . }}-egress
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/component, operator: In, values: [backend, celery, migrate] }
+  policyTypes: [Egress]
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { port: 53, protocol: UDP }
+        - { port: 53, protocol: TCP }
+    # Memorystore (private IP, configurable per-env)
+    - to: [{ ipBlock: { cidr: 10.0.0.0/8 } }]
+      ports: [{ port: 6379, protocol: TCP }]
+    # private.googleapis.com VIP for Secret Manager etc.
+    - to: [{ ipBlock: { cidr: 199.36.153.4/30 } }]
+      ports: [{ port: 443, protocol: TCP }]
+    # Cloud SQL backend (proxy → instance)
+    - to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+      ports: [{ port: 3307, protocol: TCP }]

@@ -41,6 +41,12 @@ EMPLOYEE_USERNAME = 'testuser'
 
 
 def create_demo_org(apps, schema_editor):
+    # Demo seed migrations are gated by ``SEED_DEMO_DATA``. Production /
+    # staging deploys leave it unset (default False) so the cluster never
+    # contains a known-password demo account by accident.
+    if os.environ.get('SEED_DEMO_DATA', 'True').lower() not in ('true', '1', 'yes'):
+        return
+
     FAB = apps.get_model('users', 'FAB')
     Department = apps.get_model('users', 'Department')
     User = apps.get_model('users', 'User')

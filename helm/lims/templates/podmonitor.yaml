@@ -1,0 +1,16 @@
+{{- if .Values.metrics.podMonitor.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "lims.fullname" . }}-backend
+  labels:
+    {{- include "lims.componentLabels" (dict "root" . "component" "backend") | nindent 4 }}
+    release: kube-prometheus-stack         # picked up by Prometheus Operator's default selector
+spec:
+  selector:
+    matchLabels: {{- include "lims.componentSelector" (dict "root" . "component" "backend") | nindent 6 }}
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.metrics.podMonitor.interval }}
+{{- end }}

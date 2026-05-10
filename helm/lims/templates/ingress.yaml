@@ -1,0 +1,87 @@
+{{- if .Values.ingress.enabled -}}
+{{- if .Values.ingress.managedCertificate -}}
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: {{ include "lims.fullname" . }}-cert
+  labels: {{- include "lims.labels" . | nindent 4 }}
+spec:
+  domains:
+    - {{ .Values.ingress.host | quote }}
+---
+{{- end }}
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: {{ include "lims.fullname" . }}-backend
+  labels: {{- include "lims.labels" . | nindent 4 }}
+spec:
+  healthCheck:
+    type: HTTP
+    requestPath: /readyz
+    port: 8000
+  timeoutSec: 60
+  connectionDraining:
+    drainingTimeoutSec: 30
+  logging:
+    enable: true
+    sampleRate: {{ if eq .Values.env "prod" }}0.1{{ else }}1.0{{ end }}
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: {{ include "lims.fullname" . }}-frontend-cfg
+  labels: {{- include "lims.labels" . | nindent 4 }}
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: MOVED_PERMANENTLY_DEFAULT
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "lims.fullname" . }}
+  labels: {{- include "lims.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.className | quote }}
+    {{- if .Values.ingress.managedCertificate }}
+    networking.gke.io/managed-certificates: {{ include "lims.fullname" . }}-cert
+    {{- end }}
+    {{- if .Values.ingress.staticIp }}
+    kubernetes.io/ingress.global-static-ip-name: {{ .Values.ingress.staticIp | quote }}
+    {{- end }}
+    networking.gke.io/v1beta1.FrontendConfig: {{ include "lims.fullname" . }}-frontend-cfg
+spec:
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: { name: {{ include "lims.fullname" . }}-backend, port: { number: 8000 } }
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service: { name: {{ include "lims.fullname" . }}-backend, port: { number: 8000 } }
+          - path: /healthz
+            pathType: Exact
+            backend:
+              service: { name: {{ include "lims.fullname" . }}-backend, port: { number: 8000 } }
+          - path: /readyz
+            pathType: Exact
+            backend:
+              service: { name: {{ include "lims.fullname" . }}-backend, port: { number: 8000 } }
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service: { name: {{ include "lims.fullname" . }}-backend, port: { number: 8000 } }
+          - path: /static
+            pathType: Prefix
+            backend:
+              service: { name: {{ include "lims.fullname" . }}-backend, port: { number: 8000 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: {{ include "lims.fullname" . }}-frontend, port: { number: 8080 } }
+{{- end }}

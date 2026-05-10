@@ -1,0 +1,28 @@
+# staging — production-like topology at half the size.
+env: staging
+ingress:
+  host: staging.lims.example.com
+  staticIp: lims-staging-ingress-ip
+backend:
+  replicas: 2
+  hpa: { enabled: true, min: 2, max: 4, targetCPUUtilizationPercentage: 70 }
+  pdb: { minAvailable: 1 }
+frontend:
+  replicas: 1
+celery:
+  enabled: true
+  replicas: 1
+cloudSql:
+  connectionName: REPLACE-ME:us-central1:lims-staging
+config:
+  DJANGO_DEBUG: "False"
+  DJANGO_PRODUCTION: "True"
+  DJANGO_ALLOWED_HOSTS: staging.lims.example.com
+  CORS_ALLOWED_ORIGINS: https://staging.lims.example.com
+  CSRF_TRUSTED_ORIGINS: https://staging.lims.example.com
+  SEED_DEMO_DATA: "False"
+  SENTRY_ENVIRONMENT: staging
+externalSecrets:
+  prefix: lims-staging
+serviceAccount:
+  gsaEmail: lims-staging-runtime@REPLACE-ME.iam.gserviceaccount.com

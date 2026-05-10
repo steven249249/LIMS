@@ -157,3 +157,9 @@ frontend/.playwright/
 frontend/coverage/
 backend/htmlcov/
 backend/.coverage
+
+# Django collectstatic output — populated by Dockerfile.k8s at build time;
+# the empty .gitkeep keeps the directory present so WhiteNoise doesn't warn
+# in local dev / tests.
+backend/staticfiles/*
+!backend/staticfiles/.gitkeep

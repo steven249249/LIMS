@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lims.fullname" . }}-backend
+  labels: {{- include "lims.componentLabels" (dict "root" . "component" "backend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels: {{- include "lims.componentSelector" (dict "root" . "component" "backend") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "lims.componentLabels" (dict "root" . "component" "backend") | nindent 8 }}
+      annotations:
+        # Roll the Deployment whenever the rendered ConfigMap changes.
+        checksum/config: {{ include "lims.configHash" . }}
+    spec:
+      serviceAccountName: {{ include "lims.fullname" . }}
+      terminationGracePeriodSeconds: 30
+      securityContext: {{- include "lims.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: app
+          image: {{ include "lims.image.backend" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - { name: http, containerPort: 8000 }
+          envFrom:
+            - configMapRef: { name: {{ include "lims.fullname" . }}-config }
+            {{- if .Values.externalSecrets.enabled }}
+            - secretRef:    { name: {{ include "lims.fullname" . }}-secrets }
+            {{- end }}
+          resources: {{- toYaml .Values.backend.resources | nindent 12 }}
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec: { command: ["/bin/sh", "-c", "sleep 5"] }   # let LB drop us before SIGTERM
+          securityContext: {{- include "lims.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+
+        {{- if .Values.cloudSql.enabled }}
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.2
+          args:
+            - "--private-ip"
+            - "--port=3306"
+            - "--health-check"
+            - {{ .Values.cloudSql.connectionName | quote }}
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+        {{- end }}
+      volumes:
+        - { name: tmp, emptyDir: {} }

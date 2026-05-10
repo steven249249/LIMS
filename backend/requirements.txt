@@ -11,6 +11,11 @@ celery>=5.6,<6
 gunicorn>=23,<24
 sentry-sdk>=2.20,<3
 
+# Cloud-native runtime
+whitenoise[brotli]>=6.7,<7      # serves /static when there is no static web server
+django-prometheus>=2.4,<3       # /metrics endpoint scraped by Prometheus
+python-json-logger>=4,<5        # JSON stdout for Loki / Cloud Logging
+
 # Test stack
 pytest>=9,<10
 pytest-django>=4.10,<5

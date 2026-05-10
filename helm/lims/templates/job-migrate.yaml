@@ -1,0 +1,54 @@
+{{- if .Values.migrate.enabled -}}
+# Argo CD pre-sync hook: blocks the rest of the sync until migrations finish.
+# Recreated on every sync (BeforeHookCreation), so re-runs are clean.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "lims.fullname" . }}-migrate
+  labels: {{- include "lims.componentLabels" (dict "root" . "component" "migrate") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: {{- include "lims.componentLabels" (dict "root" . "component" "migrate") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "lims.fullname" . }}
+      securityContext: {{- include "lims.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "lims.image.backend" . | quote }}
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          envFrom:
+            - configMapRef: { name: {{ include "lims.fullname" . }}-config }
+            {{- if .Values.externalSecrets.enabled }}
+            - secretRef:    { name: {{ include "lims.fullname" . }}-secrets }
+            {{- end }}
+          resources: {{- toYaml .Values.migrate.resources | nindent 12 }}
+          securityContext: {{- include "lims.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+        {{- if .Values.cloudSql.enabled }}
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.2
+          # --quitquitquit lets the sidecar exit when the migration container does
+          args: ["--private-ip", "--port=3306", "--quitquitquit",
+                 {{ .Values.cloudSql.connectionName | quote }}]
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+        {{- end }}
+      volumes:
+        - { name: tmp, emptyDir: {} }
+{{- end }}
