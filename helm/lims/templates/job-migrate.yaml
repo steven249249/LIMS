@@ -1,15 +1,21 @@
 {{- if .Values.migrate.enabled -}}
-# Argo CD pre-sync hook: blocks the rest of the sync until migrations finish.
-# Recreated on every sync (BeforeHookCreation), so re-runs are clean.
+# Argo CD Sync hook (NOT PreSync). PreSync runs before any sync wave —
+# meaning before the ConfigMap + Secret this Job depends on. Sync hooks
+# respect sync-wave instead, so we use:
+#   wave -10  → ServiceAccount + ConfigMap + Secret (annotated below)
+#   wave  -5  → this migrate Job
+#   wave   0  → Deployments, Services (default)
+# Argo waits for each wave to be Healthy before the next, so Deployments
+# still won't roll until migrations succeed.
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "lims.fullname" . }}-migrate
   labels: {{- include "lims.componentLabels" (dict "root" . "component" "migrate") | nindent 4 }}
   annotations:
-    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
-    argocd.argoproj.io/sync-wave: "-10"
+    argocd.argoproj.io/sync-wave: "-5"
 spec:
   backoffLimit: 0
   ttlSecondsAfterFinished: 600

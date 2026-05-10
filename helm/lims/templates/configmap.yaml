@@ -3,6 +3,9 @@ kind: ConfigMap
 metadata:
   name: {{ include "lims.fullname" . }}-config
   labels: {{- include "lims.labels" . | nindent 4 }}
+  annotations:
+    # Apply before the migrate Job (-5) and Deployments (0) need it.
+    argocd.argoproj.io/sync-wave: "-10"
 data:
   DB_ENGINE: mysql
   {{- if .Values.cloudSql.enabled }}

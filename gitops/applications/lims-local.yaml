@@ -1,0 +1,67 @@
+# Standalone Argo CD Application for the kind validation cluster.
+#
+# Differs from gitops/applicationsets/lims.yaml in three ways:
+#   * single env (no ApplicationSet generator)
+#   * sources both come from the LOCAL filesystem checkout (path: helm/lims)
+#     — Argo CD's repo-server clones the GitHub repo, which is fine because
+#     this repo IS already on GitHub. If you're testing local-only edits
+#     before pushing, switch the syncPolicy to manual and use:
+#       argocd app set lims-local --revision <branch> --validate=false
+#   * targets the existing `lims-local` namespace where helm/Makefile have
+#     already deployed; the first sync becomes a no-op + drift-tracker.
+#
+# Bootstrap:
+#   kubectl apply -f gitops/applications/lims-local.yaml
+#   kubectl port-forward svc/argocd-server -n argocd 9090:80
+#   open http://localhost:9090   (admin / kubectl get secret argocd-initial-admin-secret ...)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lims-local
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/asddzxcc1856/LIMS.git
+    targetRevision: main
+    path: helm/lims
+    helm:
+      # Use "lims" as the Helm release name so Argo CD takes over the
+      # existing release that `make kind-deploy` created. Without this
+      # the release name defaults to the Application name (lims-local)
+      # and Argo would try to deploy a parallel set of resources.
+      releaseName: lims
+      valueFiles:
+        - values.yaml
+        - envs/local.yaml
+      parameters:
+        # CI bumps this in real envs; for kind we pin "local" to match
+        # the image we built + loaded with `make kind-build kind-load`.
+        - { name: image.tag, value: local }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lims-local
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true
+      # Helm hook annotations on job-migrate.yaml are PreSync; kind has no
+      # Argo before, so without RespectIgnoreDifferences they'd already
+      # have run via `helm install`. Argo will recreate them on next sync;
+      # the Job's `ttlSecondsAfterFinished: 600` cleans up after itself.
+    retry:
+      limit: 3
+      backoff: { duration: 10s, factor: 2, maxDuration: 3m }
+  ignoreDifferences:
+    # Kubernetes mutates managed fields on Services that have been
+    # touched by Helm; ignore so Argo doesn't keep flagging drift.
+    - group: ""
+      kind: Service
+      jsonPointers: [/spec/clusterIP, /spec/clusterIPs]
