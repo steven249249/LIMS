@@ -12,14 +12,19 @@
 | 4 | [04-OPERATIONS-MANUAL.md](04-OPERATIONS-MANUAL.md) | 跑起來之後的日常:部署、rollback、查 log、改設定、災難復原 |
 | 5 | [05-POST-SETUP-NOTES.md](05-POST-SETUP-NOTES.md) | 上線後 24 小時 / 1 週內必做的硬化動作 + 常見雷 |
 | 6 | [06-ARGO-CD-ON-KIND.md](06-ARGO-CD-ON-KIND.md) | 在本機 kind 演練 Argo CD GitOps flow,丟 GCP 前先看過 |
+| 7 | [07-DEMO-COST-OPTIMIZATION.md](07-DEMO-COST-OPTIMIZATION.md) | **Demo 用** Scenario B 成本拆解、暫停 / destroy 流程、撐 1 個月行事曆 |
 
 ## 快速 navigation
 
-**「我要上線」** → 02 → 03 → 05
+**「我要做期末 demo,成本要控制」** → 07 → 02 → 03
+
+**「我要上線真 prod」** → 02 → 03 → 05 → 07 §F
 
 **「上線完了,日常用」** → 04
 
 **「壞了」** → 04 §I (Common failures)
+
+**「demo 結束想關掉」** → 04 §L 或 07 §D-2
 
 **「拿到代碼想理解架構」** → repo 根目錄 [CLOUD_NATIVE_CHECKLIST.md](../CLOUD_NATIVE_CHECKLIST.md) + [helm/lims/README.md](../helm/lims/README.md)
 

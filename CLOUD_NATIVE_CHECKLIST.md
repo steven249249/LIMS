@@ -4,6 +4,12 @@ Use this as the single source of truth for what to fill in when the real
 GCP project is ready. Search the repo for `REPLACE-ME` to find every spot
 that needs a real value.
 
+> 🎯 **Repo defaults are Scenario B (demo, ~$210/mo).** Cloud SQL =
+> `db-custom-1-3840` ZONAL, Memorystore = BASIC 1 GB, GKE = Managed
+> Prometheus (no self-hosted Prom stack). $300 free credit covers ~1.5
+> months. To convert to real production tier, see
+> [docs/07-DEMO-COST-OPTIMIZATION.md §F](docs/07-DEMO-COST-OPTIMIZATION.md).
+
 ## 0. Decide the names
 
 | Variable | Suggested value | Where to set |

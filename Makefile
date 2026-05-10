@@ -70,3 +70,45 @@ kind-test:
 
 backend-test:
 	cd backend && pytest --no-header -q
+
+# ─────────────────────────────────────────────────────────────────────────
+# GCP cost-control helpers (demo / Scenario B)
+# Set GCP_PROJECT before running, e.g.
+#   GCP_PROJECT=lims-prod-2026-xxx make gcp-pause
+# ─────────────────────────────────────────────────────────────────────────
+GCP_PROJECT ?=
+GCP_REGION  ?= asia-east1
+
+gcp-pause:
+	@test -n "$(GCP_PROJECT)" || { echo "set GCP_PROJECT=<project-id>"; exit 1; }
+	# Stop Cloud SQL (you keep paying for storage but not vCPU/RAM).
+	gcloud sql instances patch lims-prod-mysql \
+	  --project=$(GCP_PROJECT) --activation-policy=NEVER --quiet
+	# Scale all LIMS Deployments to 0 replicas (free up Autopilot pod billing).
+	# Memorystore can't be paused — only destroyed/created. For ~$40/mo
+	# Basic 1GB, leave it running.
+	kubectl scale -n lims-prod deployment --all --replicas=0
+	@echo "✓ Paused. To resume: make gcp-resume GCP_PROJECT=$(GCP_PROJECT)"
+
+gcp-resume:
+	@test -n "$(GCP_PROJECT)" || { echo "set GCP_PROJECT=<project-id>"; exit 1; }
+	gcloud sql instances patch lims-prod-mysql \
+	  --project=$(GCP_PROJECT) --activation-policy=ALWAYS --quiet
+	# Wait until Cloud SQL is RUNNABLE before scaling pods (otherwise the
+	# Cloud SQL Auth Proxy sidecar will crash-loop).
+	until [ "$$(gcloud sql instances describe lims-prod-mysql --project=$(GCP_PROJECT) --format='value(state)')" = "RUNNABLE" ]; do \
+	  echo "  waiting for Cloud SQL to start..."; sleep 10; \
+	done
+	# Scale pods back up to the values from helm/lims/envs/prod.yaml.
+	# Argo CD selfHeal will also do this within a few minutes if you forget.
+	kubectl scale -n lims-prod deployment lims-lims-backend --replicas=1
+	kubectl scale -n lims-prod deployment lims-lims-frontend --replicas=1
+	kubectl scale -n lims-prod deployment lims-lims-celery --replicas=1
+	@echo "✓ Resumed."
+
+gcp-destroy:
+	@test -n "$(GCP_PROJECT)" || { echo "set GCP_PROJECT=<project-id>"; exit 1; }
+	@echo "WARNING: this destroys EVERY GCP resource Terraform owns for prod."
+	@echo "Press Ctrl-C in 10 seconds to abort..."; sleep 10
+	cd infra/envs/prod && terraform destroy -auto-approve
+	@echo "✓ Demo torn down. Verify in Cloud Console → Billing that costs stop."

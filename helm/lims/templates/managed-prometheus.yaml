@@ -1,0 +1,22 @@
+{{- if .Values.managedPrometheus.enabled -}}
+# GKE Managed Prometheus PodMonitoring CRD (monitoring.googleapis.com/v1).
+# Different resource from the Prom Operator's PodMonitor — this one is
+# only valid on a cluster with `monitoring_config.managed_prometheus.enabled = true`
+# (Terraform sets this for prod).
+#
+# Cloud Monitoring → "Metrics Explorer" can then graph any
+# `prometheus.googleapis.com/...` series. Free for the first 50M
+# samples / month.
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: {{ include "lims.fullname" . }}-backend
+  labels: {{- include "lims.componentLabels" (dict "root" . "component" "backend") | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{- include "lims.componentSelector" (dict "root" . "component" "backend") | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+{{- end }}

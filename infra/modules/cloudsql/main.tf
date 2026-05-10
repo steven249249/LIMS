@@ -9,13 +9,14 @@ resource "google_sql_database_instance" "mysql" {
   region           = var.region
   database_version = "MYSQL_8_0"
 
-  # Hard-protect prod from accidental destroy. To delete, flip to false,
-  # apply, then run terraform destroy.
-  deletion_protection = var.env == "prod"
+  # `deletion_protection` defaults true in real prod, but the demo path
+  # sets it false so `terraform destroy` works at the end of the demo
+  # window without an extra apply round-trip.
+  deletion_protection = var.deletion_protection
 
   settings {
     tier              = var.tier
-    availability_type = var.env == "prod" ? "REGIONAL" : "ZONAL"
+    availability_type = var.availability_type
     disk_autoresize   = true
     disk_type         = "PD_SSD"
 

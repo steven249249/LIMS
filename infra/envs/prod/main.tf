@@ -46,19 +46,31 @@ module "gke" {
   env                 = "prod"
 }
 
-# 3. Database — Cloud SQL for MySQL 8, HA
+# 3. Database — Cloud SQL for MySQL 8.
+#    DEMO TIER (Scenario B):
+#      tier              = db-custom-1-3840  (1 vCPU, 3.75 GiB → ~$50/mo)
+#      availability_type = ZONAL              (no HA replica → save ~50%)
+#      deletion_protection = false            (so terraform destroy works
+#                                              when demo window ends)
+#    For real production switch to db-custom-2-7680 + REGIONAL + true.
 module "cloudsql" {
   source = "../../modules/cloudsql"
 
-  name_prefix     = local.name_prefix
-  region          = var.region
-  vpc_id          = module.network.vpc_id
-  env             = "prod"
-  tier            = "db-custom-2-7680"
-  psa_dependency  = module.network.psa_connection
+  name_prefix         = local.name_prefix
+  region              = var.region
+  vpc_id              = module.network.vpc_id
+  env                 = "prod"
+  tier                = "db-custom-1-3840"
+  availability_type   = "ZONAL"
+  deletion_protection = false
+  psa_dependency      = module.network.psa_connection
 }
 
-# 4. Cache + Celery broker — Memorystore Redis, HA
+# 4. Cache + Celery broker — Memorystore Redis.
+#    DEMO TIER (Scenario B):
+#      tier      = BASIC      (single-node, no replica → save ~50%)
+#      memory_gb = 1          (~$40/mo)
+#    Real prod: STANDARD_HA + 5 GB.
 module "memorystore" {
   source = "../../modules/memorystore"
 
@@ -67,7 +79,8 @@ module "memorystore" {
   vpc_id         = module.network.vpc_id
   psa_range_name = module.network.psa_range_name
   env            = "prod"
-  memory_gb      = 5
+  tier           = "BASIC"
+  memory_gb      = 1
 
   depends_on = [module.network]
 }

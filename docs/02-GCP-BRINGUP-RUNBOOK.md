@@ -2,6 +2,8 @@
 
 從零把 LIMS 部署到 GKE 的完整步驟。每一步都標明「在哪個 console 點什麼」、「跑什麼指令」、「成功應該看到什麼」。
 
+> 🎯 **本手冊使用 Scenario B (demo) tier**,月費約 **$210**,$300 GCP free credit 撐 ~1.5 個月。所有功能保留 (frontend/backend/MySQL/Redis/Celery/observability/admin)。完整成本拆解 → [07-DEMO-COST-OPTIMIZATION.md](07-DEMO-COST-OPTIMIZATION.md)。
+
 **預計時間:** 第一次跑大概 4-6 小時(包含 Cloud SQL 初始化 ~15 分鐘、ManagedCertificate 簽發 ~30 分鐘等待時間)。
 
 **順序很重要 — 跨步驟有 dependency:**

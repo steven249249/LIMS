@@ -1,36 +1,112 @@
-# prod — full HPA, strict security, no auto-sync (Argo flag, not Helm).
+# prod — DEMO sizing (Scenario B, ~$200/month).
+#
 # DNS: lims.ddns.net A record points at the GCLB static IP reserved by
-# infra/envs/prod (output: ingress_ip). DDNS provider must allow updates
-# from a static IP; once the static IP is allocated, lock the A record.
+# infra/envs/prod (output: ingress_static_ip_address). DDNS provider must
+# allow updates from a static IP; once the static IP is allocated, lock
+# the A record.
+#
+# All features stay ON (frontend + backend + MySQL + Redis + Celery +
+# observability + JWT auth + admin console). Sizes are dialled down so
+# the $300 GCP free credit lasts ~1.5 months.
+#
+# When this becomes a real production workload, see Scenario A in
+# docs/07-DEMO-COST-OPTIMIZATION.md to scale up.
 env: prod
 ingress:
   host: lims.ddns.net
   staticIp: lims-prod-ingress-ip
+
+# ── Backend ──────────────────────────────────────────────────────────────
+# 1 replica is enough for demo traffic; HPA min=1 max=2 keeps headroom.
 backend:
-  replicas: 3
+  replicas: 1
   resources:
-    requests: { cpu: 500m, memory: 1Gi }
-    limits:   { cpu: "2",  memory: 2Gi }
-  hpa: { enabled: true, min: 3, max: 10, targetCPUUtilizationPercentage: 70 }
-  pdb: { minAvailable: 2 }
-  gunicornWorkers: 6
+    requests: { cpu: 250m, memory: 512Mi }
+    limits:   { cpu: "1",  memory: 1Gi   }
+  hpa: { enabled: true, min: 1, max: 2, targetCPUUtilizationPercentage: 75 }
+  pdb: { minAvailable: 0 }      # 1 replica → can't keep min 1 during voluntary disruption
+  gunicornWorkers: 3
+
+# ── Frontend ─────────────────────────────────────────────────────────────
 frontend:
-  replicas: 2
-  hpa: { enabled: true, min: 2, max: 5, targetCPUUtilizationPercentage: 70 }
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 128Mi }
+  hpa: { enabled: false, min: 1, max: 2, targetCPUUtilizationPercentage: 70 }
+
+# ── Celery — kept ON, smallest footprint ─────────────────────────────────
+# Currently no @shared_task in the codebase, so the worker idles —
+# but the demo brief says "all existing services must be reachable",
+# and a stopped Celery would fail the readyz check that pings the broker.
 celery:
   enabled: true
   replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 250m, memory: 256Mi }
+
+# ── Migrations job — same image, runs once per deploy ───────────────────
+migrate:
+  enabled: true
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+# ── Cloud SQL ────────────────────────────────────────────────────────────
+# Connection name from `terraform output cloudsql_connection_name`.
 cloudSql:
-  connectionName: REPLACE-ME:us-central1:lims-prod
+  enabled: true
+  connectionName: REPLACE-ME:asia-east1:lims-prod-mysql
+  databaseName: lab_booking
+  databaseUser: lims_app
+
+# ── Memorystore ──────────────────────────────────────────────────────────
+# REDIS_URL is set as a Secret value (lims-prod-redis-url), populated by
+# the memorystore Terraform module + ESO. The value here is just a
+# placeholder so Helm template renders without error.
+redis:
+  url: redis://placeholder:6379/0     # overridden by Secret env
+
+# ── App config ───────────────────────────────────────────────────────────
 config:
   DJANGO_DEBUG: "False"
   DJANGO_PRODUCTION: "True"
   DJANGO_ALLOWED_HOSTS: lims.ddns.net
   CORS_ALLOWED_ORIGINS: https://lims.ddns.net
   CSRF_TRUSTED_ORIGINS: https://lims.ddns.net
-  SEED_DEMO_DATA: "False"
+  SEED_DEMO_DATA: "True"            # demo: keep the seed accounts/lots so reviewers can log in
+  DJANGO_LOG_LEVEL: INFO
   SENTRY_ENVIRONMENT: prod
+
+# ── Secrets ──────────────────────────────────────────────────────────────
 externalSecrets:
+  enabled: true
+  storeName: gcpsm
   prefix: lims-prod
+  keys:
+    - DJANGO_SECRET_KEY
+    - DB_PASSWORD
+    - LIMS_ADMIN_PASSWORD
+    - SENTRY_DSN
+    - REDIS_URL                     # full URL (auth + host:port) from terraform output
+
+# ── Observability — managed by GCP, not self-hosted ─────────────────────
+# GKE Managed Prometheus scrapes /metrics; Cloud Logging captures stdout;
+# Cloud Trace receives OTLP if OTEL_EXPORTER_OTLP_ENDPOINT is set.
+# We DO NOT install kube-prometheus-stack / Loki / Tempo for the demo —
+# saves 6+ pods of CPU/RAM and 100+ GB of GCS storage.
+metrics:
+  podMonitor:
+    enabled: false                  # PodMonitor (Prom Operator CRD) — not used in demo
+managedPrometheus:
+  enabled: true                     # GKE Managed Prometheus — Google scrapes /metrics for us
+
+# ── ServiceAccount + Workload Identity ──────────────────────────────────
 serviceAccount:
+  create: true
   gsaEmail: lims-prod-runtime@REPLACE-ME.iam.gserviceaccount.com
+
+# ── NetworkPolicy ON — prod even in demo mode ───────────────────────────
+networkPolicy:
+  enabled: true

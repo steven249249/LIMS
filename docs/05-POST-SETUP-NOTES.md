@@ -233,37 +233,40 @@ data:
 
 ## D. 日後成本控制
 
-### D-1. 已知會花錢的東西
+> 完整 demo 成本拆解 + 行事曆建議 → [07-DEMO-COST-OPTIMIZATION.md](07-DEMO-COST-OPTIMIZATION.md)。下面是高階摘要。
+
+### D-1. 已知會花錢的東西 (Scenario B / demo 規模)
 
 | Resource | 月費 (asia-east1, 估) |
 |---|---|
-| GKE Autopilot cluster | $73 (control plane) + pod usage |
-| Cloud SQL `db-custom-2-7680` REGIONAL | ~$200 (HA) |
-| Memorystore Redis Standard 5GB | ~$70 |
-| Static IP (reserved, idle) | $7.30 |
-| Cloud Logging | 每 GB 寫入 $0.50 (前 50GB 免費) |
-| Cloud Trace | 每 100 萬 span $0.20 |
-| Egress to internet | 看流量 |
+| GKE Autopilot cluster | $73 (control plane) + ~$25 (pod CPU/RAM) |
+| Cloud SQL `db-custom-1-3840` ZONAL | ~$50 |
+| Memorystore Redis BASIC 1 GB | ~$40 |
+| Cloud Load Balancer (HTTPS) | ~$18 |
+| Static IP (in use) | $4 |
+| Cloud NAT | ~$1 |
+| Artifact Registry | ~$1 |
+| Cloud Logging / Managed Prom / Trace | $0 (免費 tier 內) |
 
-**全部加起來 prod 月費 ~$400-500 USD。**
+**Demo 月費約 $210**,$300 free credit 撐 ~1.4 個月。
+
+→ 真 production 規模 (Scenario A: HA + 大 tier + self-hosted observability) 約 $700/mo。
 
 ### D-2. 省錢路線
 
-- dev/staging 用 ZONAL 不用 REGIONAL Cloud SQL → 省一半
-- dev/staging 用 BASIC Memorystore 而不是 STANDARD_HA → 省一半
-- 不用 24/7 跑 cluster:晚上 / 假日 scale 到 0 (`gcloud container clusters resize ... --num-nodes=0`)
-- Cloud SQL 也可以 stop:`gcloud sql instances patch <name> --activation-policy=NEVER`,要用時 ALWAYS
-
-寫成腳本:
+- 只開 prod env(不 apply dev/staging Terraform)— 已經是預設
+- 半夜 / 假日 暫停:`make gcp-pause GCP_PROJECT=...` 把 Cloud SQL stop + pods 縮 0,降到 ~$135/mo
+- 完全 destroy:`make gcp-destroy GCP_PROJECT=...` → $0/mo
+- Demo 結束記得 `make gcp-destroy`,不要忘
 
 ```bash
-# scripts/lims-prod-pause.sh
-gcloud sql instances patch lims-prod-mysql --activation-policy=NEVER --quiet
-# resume:
-# gcloud sql instances patch lims-prod-mysql --activation-policy=ALWAYS --quiet
+# Pause 一晚不用
+make gcp-pause GCP_PROJECT=lims-prod-2026-xxx
+# 起床 resume
+make gcp-resume GCP_PROJECT=lims-prod-2026-xxx
+# 期末 demo 結束完全清掉
+make gcp-destroy GCP_PROJECT=lims-prod-2026-xxx
 ```
-
-但別在生產這樣搞,只 dev/staging 用。
 
 ---
 

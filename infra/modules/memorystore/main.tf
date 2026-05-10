@@ -6,7 +6,7 @@ terraform {
 
 resource "google_redis_instance" "redis" {
   name           = "${var.name_prefix}-redis"
-  tier           = var.env == "prod" ? "STANDARD_HA" : "BASIC"
+  tier           = var.tier
   memory_size_gb = var.memory_gb
   region         = var.region
   redis_version  = "REDIS_7_0"

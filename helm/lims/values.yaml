@@ -116,10 +116,19 @@ networkPolicy:
   enabled: true
 
 # ── Observability ─────────────────────────────────────────────────────────
+# Two separate scrape paths, pick one (or both):
+#   metrics.podMonitor.enabled    — for self-hosted kube-prometheus-stack
+#                                   (Prom Operator). Disabled in demo to
+#                                   avoid the cost of running 6+ Prom pods.
+#   managedPrometheus.enabled     — for GKE Managed Prometheus
+#                                   (cluster has managed_prometheus.enabled=true).
+#                                   Cheaper, no Prom pods to run.
 metrics:
   podMonitor:
     enabled: true
     interval: 30s
+managedPrometheus:
+  enabled: false
 
 # ── Migration Job (Argo CD PreSync hook) ──────────────────────────────────
 migrate:

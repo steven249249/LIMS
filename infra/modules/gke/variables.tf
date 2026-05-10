@@ -20,3 +20,15 @@ variable "authorized_networks" {
   #     "ci-egress-nat" = "198.51.100.0/32"
   #   }
 }
+
+variable "enable_managed_prometheus" {
+  type        = bool
+  description = "Use GKE Managed Prometheus (free 50M samples/mo). Cheaper than kube-prom-stack."
+  default     = true
+}
+
+variable "binary_auth_mode" {
+  type        = string
+  description = "Binary Authorization eval mode. DISABLED for demo, PROJECT_SINGLETON_POLICY_ENFORCE for real prod."
+  default     = "DISABLED"
+}

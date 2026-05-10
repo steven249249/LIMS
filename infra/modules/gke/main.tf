@@ -45,19 +45,22 @@ resource "google_container_cluster" "this" {
 
   release_channel { channel = "REGULAR" }
 
-  # Logging is on by default (system + workloads stream to Cloud Logging).
-  # We disable Managed Prometheus because we run our own kube-prom-stack.
+  # Cloud Logging is on (system + workloads). For demo we also enable
+  # Managed Prometheus so /metrics scraping works without running a
+  # self-hosted Prometheus + Loki + Tempo stack (saves ~$30-50/mo on
+  # observability pods). Cloud Trace + Cloud Logging + Managed Prometheus
+  # together replace the kube-prometheus-stack / Loki / Tempo trio.
   logging_config { enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"] }
   monitoring_config {
-    enable_components = ["SYSTEM_COMPONENTS"]
-    managed_prometheus { enabled = false }
+    enable_components  = ["SYSTEM_COMPONENTS"]
+    managed_prometheus { enabled = var.enable_managed_prometheus }
   }
 
-  # Binary Authorization in PROJECT_SINGLETON_POLICY_ENFORCE mode means the
-  # cluster will refuse images without a valid attestation. Leave it as
-  # PERMISSIVE in dev/staging so unsigned local images can deploy.
+  # Binary Authorization adds complexity without saving money. Leave OFF
+  # for the demo; flip to ENFORCE if/when this becomes a real production
+  # workload.
   binary_authorization {
-    evaluation_mode = var.env == "prod" ? "PROJECT_SINGLETON_POLICY_ENFORCE" : "DISABLED"
+    evaluation_mode = var.binary_auth_mode
   }
 
   # Block accidental destroy in prod. Toggle off, then `terraform apply`

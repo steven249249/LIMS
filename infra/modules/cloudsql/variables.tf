@@ -7,11 +7,26 @@ variable "tier" {
   type        = string
   description = <<-EOT
     Cloud SQL machine tier.
-      dev:     db-f1-micro            (~$10/mo, ZONAL)
-      staging: db-custom-1-3840       (~$50/mo, ZONAL)
-      prod:    db-custom-2-7680       (~$200/mo, REGIONAL/HA)
+      Cheapest demo path:  db-custom-1-3840   (~$50/mo, ZONAL)
+      Real prod (HA):      db-custom-2-7680   (~$200/mo, REGIONAL)
   EOT
-  default     = "db-f1-micro"
+  default     = "db-custom-1-3840"
+}
+
+variable "availability_type" {
+  type        = string
+  description = "ZONAL (cheaper, single-AZ) or REGIONAL (HA, ~2x cost)."
+  default     = "ZONAL"
+  validation {
+    condition     = contains(["ZONAL", "REGIONAL"], var.availability_type)
+    error_message = "availability_type must be ZONAL or REGIONAL."
+  }
+}
+
+variable "deletion_protection" {
+  type        = bool
+  description = "If true, `terraform destroy` is blocked until you flip this off + apply."
+  default     = false
 }
 
 variable "database_name" {
