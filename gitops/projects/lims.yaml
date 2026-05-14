@@ -7,9 +7,9 @@ spec:
   description: LIMS application — Helm-based deploys to lims-{dev,staging,prod}
   sourceRepos:
     # Application chart
-    - https://github.com/REPLACE-ME/lims.git
+    - https://github.com/steven249249/lims.git
     # GitOps manifests (this directory tree)
-    - https://github.com/REPLACE-ME/lims.git
+    - https://github.com/steven249249/lims.git
     # Upstream charts the observability stack pulls from
     - https://prometheus-community.github.io/helm-charts
     - https://grafana.github.io/helm-charts
@@ -48,11 +48,11 @@ spec:
       policies:
         - p, proj:lims:read-only, applications, get, lims/*, allow
       groups:
-        - REPLACE-ME:lims-readers
+        - steven249249:lims-readers
     - name: deployer
       description: Trigger sync (no destroy)
       policies:
         - p, proj:lims:deployer, applications, get,  lims/*, allow
         - p, proj:lims:deployer, applications, sync, lims/*, allow
       groups:
-        - REPLACE-ME:lims-deployers
+        - steven249249:lims-deployers
