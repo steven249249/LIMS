@@ -1,9 +1,12 @@
 variable "project_id" { type = string }
 variable "name_prefix" { type = string }
-variable "region"      { type = string, default = "asia-east1" }
-variable "vpc_id"      { type = string }
-variable "subnet_id"   { type = string }
-variable "env"         { type = string }   # dev | staging | prod
+variable "region" {
+  type    = string
+  default = "asia-east1"
+}
+variable "vpc_id" { type = string }
+variable "subnet_id" { type = string }
+variable "env" { type = string } # dev | staging | prod
 
 variable "master_cidr" {
   type    = string

@@ -57,7 +57,7 @@ migrate:
 # Connection name from `terraform output cloudsql_connection_name`.
 cloudSql:
   enabled: true
-  connectionName: REPLACE-ME:asia-east1:lims-prod-mysql
+  connectionName: flawless-psyche-495420-h5:asia-east1:lims-prod-mysq
   databaseName: lab_booking
   databaseUser: lims_app
 
@@ -105,7 +105,7 @@ managedPrometheus:
 # ── ServiceAccount + Workload Identity ──────────────────────────────────
 serviceAccount:
   create: true
-  gsaEmail: lims-prod-runtime@REPLACE-ME.iam.gserviceaccount.com
+  gsaEmail: lims-prod-runtime@flawless-psyche-495420-h5.iam.gserviceaccount.com
 
 # ── NetworkPolicy ON — prod even in demo mode ───────────────────────────
 networkPolicy:

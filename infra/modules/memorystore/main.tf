@@ -27,7 +27,9 @@ resource "google_redis_instance" "redis" {
 # via External Secrets Operator instead of a Terraform output.
 resource "google_secret_manager_secret" "redis_auth" {
   secret_id = "${var.name_prefix}-redis-auth"
-  replication { auto {} }
+  replication {
+    auto {}
+  }
 }
 
 resource "google_secret_manager_secret_version" "redis_auth" {
@@ -40,6 +42,13 @@ locals {
   redis_url = "redis://:${google_redis_instance.redis.auth_string}@${google_redis_instance.redis.host}:${google_redis_instance.redis.port}/0"
 }
 
-output "host"      { value = google_redis_instance.redis.host }
-output "port"      { value = google_redis_instance.redis.port }
-output "redis_url" { value = local.redis_url, sensitive = true }
+output "host" {
+  value = google_redis_instance.redis.host
+}
+output "port" {
+  value = google_redis_instance.redis.port
+}
+output "redis_url" {
+  value     = local.redis_url
+  sensitive = true
+}

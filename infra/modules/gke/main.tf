@@ -52,7 +52,7 @@ resource "google_container_cluster" "this" {
   # together replace the kube-prometheus-stack / Loki / Tempo trio.
   logging_config { enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"] }
   monitoring_config {
-    enable_components  = ["SYSTEM_COMPONENTS"]
+    enable_components = ["SYSTEM_COMPONENTS"]
     managed_prometheus { enabled = var.enable_managed_prometheus }
   }
 
@@ -68,6 +68,14 @@ resource "google_container_cluster" "this" {
   deletion_protection = var.env == "prod"
 }
 
-output "cluster_name"     { value = google_container_cluster.this.name }
-output "cluster_endpoint" { value = google_container_cluster.this.endpoint, sensitive = true }
-output "cluster_ca_cert"  { value = google_container_cluster.this.master_auth[0].cluster_ca_certificate, sensitive = true }
+output "cluster_name" {
+  value = google_container_cluster.this.name
+}
+output "cluster_endpoint" {
+  value     = google_container_cluster.this.endpoint
+  sensitive = true
+}
+output "cluster_ca_cert" {
+  value     = google_container_cluster.this.master_auth[0].cluster_ca_certificate
+  sensitive = true
+}

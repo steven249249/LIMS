@@ -1,7 +1,10 @@
-variable "project_id"  { type = string }
-variable "region"      { type = string, default = "asia-east1" }
+variable "project_id" { type = string }
+variable "region" {
+  type    = string
+  default = "asia-east1"
+}
 variable "name_prefix" { type = string }
-variable "namespace"   { type = string }   # K8s namespace the runtime SA binds into
+variable "namespace" { type = string } # K8s namespace the runtime SA binds into
 
 variable "kubernetes_service_accounts" {
   type        = list(string)
@@ -15,5 +18,11 @@ variable "enable_ci_builder" {
   default     = false
 }
 
-variable "github_org"  { type = string, default = "REPLACE-ME" }
-variable "github_repo" { type = string, default = "lims" }
+variable "github_org" {
+  type    = string
+  default = "REPLACE-ME"
+}
+variable "github_repo" {
+  type    = string
+  default = "lims"
+}

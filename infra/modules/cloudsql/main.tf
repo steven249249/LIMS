@@ -23,7 +23,6 @@ resource "google_sql_database_instance" "mysql" {
     backup_configuration {
       enabled                        = true
       binary_log_enabled             = true
-      point_in_time_recovery_enabled = true
       transaction_log_retention_days = var.env == "prod" ? 7 : 1
       backup_retention_settings {
         retained_backups = var.env == "prod" ? 30 : 7
