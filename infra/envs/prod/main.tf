@@ -2,8 +2,7 @@ terraform {
   required_version = ">= 1.7"
 
   backend "gcs" {
-    # Created manually before first `terraform init`. See infra/README.md.
-    bucket = "lims-tfstate-prod"
+    bucket = "flawless-psyche-495420-h5-tfstate-prod"
     prefix = "infra"
   }
 
@@ -113,7 +112,10 @@ output "ingress_static_ip_address" { value = module.network.ingress_static_ip_ad
 output "ingress_static_ip_name"    { value = module.network.ingress_static_ip_name }
 output "cluster_name"              { value = module.gke.cluster_name }
 output "cloudsql_connection_name"  { value = module.cloudsql.connection_name }
-output "redis_url"                 { value = module.memorystore.redis_url, sensitive = true }
+output "redis_url" {
+  value     = module.memorystore.redis_url
+  sensitive = true
+}
 output "artifact_registry_path"    { value = module.artifact_registry.repository_path }
 output "runtime_gsa_email"         { value = module.iam.runtime_gsa_email }
 output "ci_builder_email"          { value = module.iam.ci_builder_email }
